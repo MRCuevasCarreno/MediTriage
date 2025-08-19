@@ -18,9 +18,24 @@ A diferencia de los sistemas de agendamiento tradicionales en el país, MediTria
 
 **Nota importante:** La orientación entregada por el sistema no constituye un diagnóstico médico. El módulo de IA es únicamente informativo y debe ser complementado siempre con la evaluación de un profesional de la salud.
 
-## Tecnologías propuestas
-- Frontend: React con Vite y Tailwind CSS
-- Backend: .NET 8 Web API (C#)
-- Base de datos: SQL Server con Entity Framework Core
-- Inteligencia artificial: OpenAI API (GPT-4o o GPT-5)
+- ## Stack técnico
+
+- Backend: .NET 8 Web API (C#), Entity Framework Core, SQL Server
+- Frontend: React + Vite + TypeScript + Tailwind CSS
+- IA: OpenAI API (modelo GPT‑4o o GPT‑5, a definir en configuración)
 - Autenticación: JWT con roles (Paciente, Médico, Administrador)
+- Observabilidad: logs estructurados y métricas básicas
+- Contenedores (opcional): Docker y Docker Compose
+
+---
+
+## Requisitos previos
+
+- .NET SDK 8.0 o superior  
+- Node.js LTS (18+ recomendado) y npm  
+- SQL Server (local o en contenedor Docker)  
+- (Opcional) Docker Desktop para levantar todo con Compose
+
+
+
+
