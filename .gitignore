@@ -1,41 +1,36 @@
-# Prerequisites
-*.d
+# Visual Studio / .NET
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+bin/
+obj/
+TestResults/
+*.VisualState.xml
+*.cache
+*.mdb
+*.opendb
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Logs
+*.log
+logs/
 
-# Precompiled Headers
-*.gch
-*.pch
+# Config locales (ajusta según tu política)
+appsettings.Local.json
+appsettings.*.local.json
 
-# Linker files
-*.ilk
+# NuGet
+packages/
+*.nupkg
+project.lock.json
 
-# Debugger Files
-*.pdb
+# Frontend (si usas React/Vite)
+node_modules/
+dist/
+build/
+*.tsbuildinfo
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# debug information files
-*.dwo
+# Sistema
+.DS_Store
+Thumbs.db
