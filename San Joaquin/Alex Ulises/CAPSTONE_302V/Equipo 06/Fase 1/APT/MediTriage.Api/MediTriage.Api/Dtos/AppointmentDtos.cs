@@ -6,6 +6,19 @@ public class AppointmentCreateDto
     public int DoctorId { get; set; }
     public DateTime Start { get; set; }
     public DateTime End { get; set; }
-    public string? TriageLevel { get; set; } // "LOW" | "MEDIUM" | "HIGH"
+    public string? TriageLevel { get; set; }
+    public string? TriageNotes { get; set; }
+}
+
+public class AppointmentDto
+{
+    public int Id { get; set; }
+    public int PatientId { get; set; }
+    public string PatientName { get; set; } = null!;
+    public int DoctorId { get; set; }
+    public string DoctorName { get; set; } = null!;
+    public DateTime Start { get; set; }
+    public DateTime End { get; set; }
+    public string? TriageLevel { get; set; }
     public string? TriageNotes { get; set; }
 }

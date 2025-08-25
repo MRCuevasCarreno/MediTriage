@@ -3,6 +3,7 @@ using MediTriage.Api.Dtos;
 using MediTriage.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MediTriage.Api.Dtos;
 
 namespace MediTriage.Api.Controllers;
 
@@ -14,11 +15,27 @@ public class AppointmentsController : ControllerBase
     public AppointmentsController(AppDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Appointment>>> Get()
-        => await _db.Appointments
+    public async Task<ActionResult<IEnumerable<AppointmentDto>>> Get()
+    {
+        var list = await _db.Appointments
             .Include(a => a.Patient).ThenInclude(p => p.User)
             .Include(a => a.Doctor).ThenInclude(d => d.User)
+            .Select(a => new AppointmentDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = a.Patient.User.Name,
+                DoctorId = a.DoctorId,
+                DoctorName = a.Doctor.User.Name,
+                Start = a.Start,
+                End = a.End,
+                TriageLevel = a.TriageLevel,
+                TriageNotes = a.TriageNotes
+            })
             .ToListAsync();
+
+        return Ok(list);
+    }
 
     [HttpPost]
     public async Task<ActionResult<Appointment>> Create([FromBody] AppointmentCreateDto request)
@@ -44,6 +61,10 @@ public class AppointmentsController : ControllerBase
 
         _db.Appointments.Add(entity);
         await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+        return CreatedAtAction(nameof(Get), new { id = entity.Id },
+        await _db.Appointments
+        .Include(a => a.Patient).ThenInclude(p => p.User)
+        .Include(a => a.Doctor).ThenInclude(d => d.User)
+        .FirstAsync(a => a.Id == entity.Id));
     }
 }

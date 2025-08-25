@@ -5,7 +5,11 @@ using Microsoft.OpenApi.Models; // <-- agrega este using
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(x =>
+    {
+        x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 // Explorador de endpoints para Swagger
 builder.Services.AddEndpointsApiExplorer();
