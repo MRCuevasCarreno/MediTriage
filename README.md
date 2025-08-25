@@ -25,16 +25,14 @@ A diferencia de los sistemas de agendamiento tradicionales en el país, MediTria
 - IA: OpenAI API (modelo GPT‑4o o GPT‑5, a definir en configuración)
 - Autenticación: JWT con roles (Paciente, Médico, Administrador)
 - Observabilidad: logs estructurados y métricas básicas
-- Contenedores (opcional): Docker y Docker Compose
 
 ---
 
 ## Requisitos previos
 
 - .NET SDK 8.0 o superior  
-- Node.js LTS (18+ recomendado) y npm  
-- SQL Server (local o en contenedor Docker)  
-- (Opcional) Docker Desktop para levantar todo con Compose
+- Node.js LTS y npm  
+- SQL Server  
 
 
 
