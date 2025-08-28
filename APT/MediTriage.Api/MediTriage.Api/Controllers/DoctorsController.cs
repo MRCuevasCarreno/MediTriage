@@ -13,20 +13,36 @@ public class DoctorsController : ControllerBase
     public DoctorsController(AppDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DoctorListDto>>> Get()
-        => await _db.Doctors
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<ActionResult> Get()
+    {
+        var list = await _db.Doctors
             .Include(d => d.User)
             .Select(d => new DoctorListDto { Id = d.Id, Name = d.User.Name, Specialty = d.Specialty })
             .ToListAsync();
 
+        return Success(list, "Listado de doctores.");
+    }
+
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<DoctorListDto>> GetById(int id)
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> GetById(int id)
     {
         var d = await _db.Doctors.Include(x => x.User)
             .Where(x => x.Id == id)
             .Select(x => new DoctorListDto { Id = x.Id, Name = x.User.Name, Specialty = x.Specialty })
             .FirstOrDefaultAsync();
 
-        return d is null ? NotFound() : Ok(d);
+        return d is null
+            ? Error(StatusCodes.Status404NotFound, "NotFound", "Doctor no encontrado.")
+            : Success(d, "Doctor encontrado.");
     }
+
+    // Helpers locales
+    private ObjectResult Error(int statusCode, string code, string message, object? data = null)
+        => StatusCode(statusCode, new ErrorResponse(code, message, data));
+
+    private OkObjectResult Success<T>(T data, string message)
+        => Ok(new SuccessResponse<T>(data, message));
 }
