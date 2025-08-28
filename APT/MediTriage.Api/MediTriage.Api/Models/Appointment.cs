@@ -1,6 +1,11 @@
 ﻿namespace MediTriage.Api.Models;
 
-public enum AppointmentStatus { Scheduled, Rescheduled, Cancelled, Attended, NoShow }
+public enum AppointmentStatus
+{
+    Scheduled = 0,
+    Completed = 1,
+    Cancelled = 2
+}
 
 public class Appointment
 {
@@ -12,7 +17,7 @@ public class Appointment
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
 
     // Campos de triage (MVP)
-    public string? TriageLevel { get; set; }       // LOW | MEDIUM | HIGH
+    public string? TriageLevel { get; set; }   // LOW | MEDIUM | HIGH
     public string? TriageNotes { get; set; }
 
     public Patient Patient { get; set; } = null!;
