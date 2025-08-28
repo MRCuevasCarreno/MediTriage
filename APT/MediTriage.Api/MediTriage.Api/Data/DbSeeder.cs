@@ -14,26 +14,21 @@ public static class DbSeeder
         int maxAppointmentsPerPatient = 3,
         bool force = false)
     {
-        // Si viene en modo "force", limpiamos tablas dependientes (sin tocar Users)
         if (force)
         {
-            // Limpia en orden por FKs
             await db.Appointments.ExecuteDeleteAsync();
             await db.Doctors.ExecuteDeleteAsync();
             await db.Patients.ExecuteDeleteAsync();
-            // Nota: Si necesitas también limpiar Users, hazlo manualmente para no borrar admins.
+            // ⚠️ No borramos Users para no perder admins
         }
         else
         {
-            // Idempotente: si ya hay Doctors o Patients, no re-sembrar.
             if (await db.Doctors.AnyAsync() || await db.Patients.AnyAsync())
                 return;
         }
 
-        // Reproducible
         Randomizer.Seed = new Random(12345);
 
-        // ---------- 1) Usuarios para Doctores y Pacientes ----------
         var specialties = new[]
         {
             "Medicina General", "Pediatría", "Ginecología", "Cardiología",
@@ -47,24 +42,29 @@ public static class DbSeeder
             "Clínica Demo", "Centro Médico Norte"
         };
 
+        // 🔑 Todos los usuarios de demo con misma pass "Demo123!"
+        const string DEMO_PASS = "Demo123!";
+        var demoHash = BCrypt.Net.BCrypt.HashPassword(DEMO_PASS);
+
         var userDoctorFaker = new Faker<User>("es")
             .RuleFor(u => u.Name, f => $"{f.Name.FirstName()} {f.Name.LastName()}")
             .RuleFor(u => u.Email, (f, u) => $"{u.Name.Replace(' ', '.').ToLower()}{f.Random.Int(10, 999)}@meditriage.cl")
-            .RuleFor(u => u.Role, _ => UserRole.Doctor);
+            .RuleFor(u => u.Role, _ => UserRole.Doctor)
+            .RuleFor(u => u.PasswordHash, _ => demoHash);
 
         var userPatientFaker = new Faker<User>("es")
             .RuleFor(u => u.Name, f => $"{f.Name.FirstName()} {f.Name.LastName()}")
             .RuleFor(u => u.Email, (f, u) => $"{u.Name.Replace(' ', '.').ToLower()}{f.Random.Int(10, 999)}@example.com")
-            .RuleFor(u => u.Role, _ => UserRole.Patient);
+            .RuleFor(u => u.Role, _ => UserRole.Patient)
+            .RuleFor(u => u.PasswordHash, _ => demoHash);
 
         var doctorUsers = userDoctorFaker.Generate(doctors);
         var patientUsers = userPatientFaker.Generate(patients);
 
         await db.Users.AddRangeAsync(doctorUsers);
         await db.Users.AddRangeAsync(patientUsers);
-        await db.SaveChangesAsync(); // Necesario para tener los User.Id (int) generados
+        await db.SaveChangesAsync();
 
-        // ---------- 2) Doctores / Pacientes (FK a UserId) ----------
         var doctorsList = doctorUsers.Select((u, idx) => new Doctor
         {
             UserId = u.Id,
@@ -76,32 +76,30 @@ public static class DbSeeder
         var patientsList = patientUsers.Select(u => new Patient
         {
             UserId = u.Id,
-            DateOfBirth = fakerEs.Date.Past(60, DateTime.Today.AddYears(-18)) // 18..78 años
+            DateOfBirth = fakerEs.Date.Past(60, DateTime.Today.AddYears(-18))
         }).ToList();
 
         await db.Doctors.AddRangeAsync(doctorsList);
         await db.Patients.AddRangeAsync(patientsList);
         await db.SaveChangesAsync();
 
-        // ---------- 3) Citas demo (Appointments) ----------
         var triage = new[] { "LOW", "MEDIUM", "HIGH" };
         var rnd = new Random(2025);
         var allAppointments = new List<Appointment>();
 
         foreach (var patient in patientsList)
         {
-            int count = rnd.Next(0, maxAppointmentsPerPatient + 1); // 0..max
+            int count = rnd.Next(0, maxAppointmentsPerPatient + 1);
             for (int i = 0; i < count; i++)
             {
                 var doctor = doctorsList[rnd.Next(doctorsList.Count)];
-                var daysOffset = rnd.Next(-15, 30); // citas recientes y próximas
-                var start = DateTime.Today.AddDays(daysOffset).AddHours(rnd.Next(8, 17)); // 08:00-16:00
+                var daysOffset = rnd.Next(-15, 30);
+                var start = DateTime.Today.AddDays(daysOffset).AddHours(rnd.Next(8, 17));
                 var end = start.AddMinutes(new[] { 20, 30, 40, 60 }[rnd.Next(4)]);
 
                 var status = AppointmentStatus.Scheduled;
                 if (start.Date < DateTime.Today.Date)
                 {
-                    // pasado → Completed o Cancelled
                     status = rnd.NextDouble() < 0.85 ? AppointmentStatus.Completed : AppointmentStatus.Cancelled;
                 }
 
@@ -124,11 +122,21 @@ public static class DbSeeder
             await db.SaveChangesAsync();
         }
 
-        // --- Log rápido en consola ---
+        // 🔑 Admin por defecto
+        if (!await db.Users.AnyAsync(u => u.Role == UserRole.Admin))
+        {
+            var admin = new User
+            {
+                Name = "Admin MediTriage",
+                Email = "admin@meditriage.local",
+                Role = UserRole.Admin,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!")
+            };
+            db.Users.Add(admin);
+            await db.SaveChangesAsync();
+        }
+
         var users = await db.Users.CountAsync();
-        var docs = doctorsList.Count;
-        var pats = patientsList.Count;
-        var appt = allAppointments.Count;
-        Console.WriteLine($"[SEED] Users={users} Doctors={docs} Patients={pats} Appointments={appt}");
+        Console.WriteLine($"[SEED] Users={users} Doctors={doctorsList.Count} Patients={patientsList.Count} Appointments={allAppointments.Count}");
     }
 }
