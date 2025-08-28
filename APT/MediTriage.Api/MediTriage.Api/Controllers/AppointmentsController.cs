@@ -3,6 +3,7 @@ using MediTriage.Api.Dtos;
 using MediTriage.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace MediTriage.Api.Controllers;
 
@@ -14,9 +15,9 @@ public class AppointmentsController : ControllerBase
     public AppointmentsController(AppDbContext db) => _db = db;
 
     // GET /api/appointments?doctorId=&patientId=&date=
-    // Unificado: lista completa o filtrada por query params (evita conflicto en Swagger)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<AppointmentDto>>> Get(
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<ActionResult> Get(
         [FromQuery] int? doctorId,
         [FromQuery] int? patientId,
         [FromQuery] DateTime? date)
@@ -35,28 +36,52 @@ public class AppointmentsController : ControllerBase
             q = q.Where(a => a.Start >= d0 && a.Start < d1);
         }
 
-        var list = await q
-            .Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient.User.Name,
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.User.Name,
-                Start = a.Start,
-                End = a.End,
-                TriageLevel = a.TriageLevel,
-                TriageNotes = a.TriageNotes
-            })
-            .ToListAsync();
-
-        return Ok(list);
+        var list = await q.Select(a => ToDto(a)).ToListAsync();
+        return Success(list, "Listado de citas.");
     }
 
-    [HttpPost]
-    public async Task<ActionResult<AppointmentDto>> Create([FromBody] AppointmentCreateDto request)
+    // GET /api/appointments/{id}
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> GetById(int id)
     {
-        // TODO: agregar validaciones/chequeo de solapamientos si corresponde
+        var dto = await _db.Appointments
+            .Include(x => x.Patient).ThenInclude(p => p.User)
+            .Include(x => x.Doctor).ThenInclude(d => d.User)
+            .Where(x => x.Id == id)
+            .Select(a => ToDto(a))
+            .FirstOrDefaultAsync();
+
+        return dto is null
+            ? Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada.")
+            : Success(dto, "Cita encontrada.");
+    }
+
+    // POST /api/appointments
+    [HttpPost]
+    [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult> Create([FromBody] AppointmentCreateDto request)
+    {
+        if (request.End <= request.Start)
+            return Error(StatusCodes.Status400BadRequest, "InvalidRange", "Fin debe ser mayor que inicio.");
+
+        var duration = request.End - request.Start;
+        if (!IsValidDuration(duration))
+            return Error(StatusCodes.Status400BadRequest, "InvalidDuration", "Duración debe estar entre 10 y 120 minutos.");
+
+        if (!IsWithinWorkingHours(request.Start, request.End))
+            return Error(StatusCodes.Status400BadRequest, "OutOfWorkingHours", "Horario debe estar entre 08:00 y 20:00.");
+
+        var overlaps = await _db.Appointments.AnyAsync(a =>
+            a.DoctorId == request.DoctorId &&
+            a.Status == AppointmentStatus.Scheduled &&
+            request.Start < a.End && request.End > a.Start
+        );
+        if (overlaps)
+            return Error(StatusCodes.Status409Conflict, "Overlap", "El doctor ya tiene una cita en ese rango.");
 
         var entity = new Appointment
         {
@@ -65,7 +90,8 @@ public class AppointmentsController : ControllerBase
             Start = request.Start,
             End = request.End,
             TriageLevel = request.TriageLevel,
-            TriageNotes = request.TriageNotes
+            TriageNotes = request.TriageNotes,
+            Status = AppointmentStatus.Scheduled
         };
 
         _db.Appointments.Add(entity);
@@ -75,23 +101,14 @@ public class AppointmentsController : ControllerBase
             .Include(a => a.Patient).ThenInclude(p => p.User)
             .Include(a => a.Doctor).ThenInclude(d => d.User)
             .Where(a => a.Id == entity.Id)
-            .Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient.User.Name,
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.User.Name,
-                Start = a.Start,
-                End = a.End,
-                TriageLevel = a.TriageLevel,
-                TriageNotes = a.TriageNotes
-            })
+            .Select(a => ToDto(a))
             .FirstAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+        return CreatedAtAction(nameof(GetById), new { id = dto.Id },
+            new SuccessResponse<AppointmentDto>(dto, "Cita creada exitosamente."));
     }
 
+    // PATCH /api/appointments/{id}/status
     [HttpPatch("{id:int}/status")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
@@ -100,56 +117,31 @@ public class AppointmentsController : ControllerBase
     {
         var appt = await _db.Appointments.FindAsync(id);
         if (appt is null)
-            return NotFound(new { error = "NotFound", message = "Cita no encontrada." });
+            return Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada.");
 
         if (!Enum.IsDefined(typeof(AppointmentStatus), body.Status))
-            return BadRequest(new { error = "InvalidStatus", message = "Estado inválido." });
+            return Error(StatusCodes.Status400BadRequest, "InvalidStatus", "Estado inválido.");
 
         var prev = appt.Status;
         var next = (AppointmentStatus)body.Status;
 
-        // Regla de negocio de ejemplo
         if (prev == AppointmentStatus.Cancelled && next == AppointmentStatus.Completed)
-            return BadRequest(new
-            {
-                error = "InvalidTransition",
-                message = "No se puede completar una cita cancelada.",
-                currentStatus = StatusToString(prev),
-                requestedStatus = StatusToString(next)
-            });
+            return Error(StatusCodes.Status400BadRequest, "InvalidTransition",
+                "No se puede completar una cita cancelada.",
+                new { currentStatus = StatusToString(prev), requestedStatus = StatusToString(next) });
 
         appt.Status = next;
         await _db.SaveChangesAsync();
 
-        return Ok(new
+        return Success(new
         {
             id = appt.Id,
             previousStatus = StatusToString(prev),
-            newStatus = StatusToString(next),
-            message = BuildStatusMessage(next)
-        });
+            newStatus = StatusToString(next)
+        }, BuildStatusMessage(next));
     }
 
-    // === Helpers (puedes dejarlos al final del controlador) ===
-    private static string StatusToString(AppointmentStatus s) => s.ToString();
-    // Si quieres nombres en español, cambia el mapping aquí:
-    // return s switch
-    // {
-    //     AppointmentStatus.Scheduled => "Programada",
-    //     AppointmentStatus.Completed => "Completada",
-    //     AppointmentStatus.Cancelled => "Cancelada",
-    //     _ => s.ToString()
-    // };
-
-    private static string BuildStatusMessage(AppointmentStatus status) => status switch
-    {
-        AppointmentStatus.Cancelled => "Cita cancelada.",
-        AppointmentStatus.Completed => "Cita marcada como completada.",
-        AppointmentStatus.Scheduled => "Cita marcada como programada.",
-        _ => "Estado actualizado."
-    };
-
-
+    // PUT /api/appointments/{id}/reschedule
     [HttpPut("{id:int}/reschedule")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
@@ -159,16 +151,17 @@ public class AppointmentsController : ControllerBase
     {
         var appt = await _db.Appointments.FindAsync(id);
         if (appt is null)
-            return NotFound(new { error = "NotFound", message = "Cita no encontrada." });
+            return Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada.");
 
         if (body.End <= body.Start)
-            return BadRequest(new { error = "InvalidRange", message = "Fin debe ser mayor que inicio." });
+            return Error(StatusCodes.Status400BadRequest, "InvalidRange", "Fin debe ser mayor que inicio.");
 
-        if (!IsValidDuration(body.End - body.Start))
-            return BadRequest(new { error = "InvalidDuration", message = "Duración debe estar entre 10 y 120 minutos." });
+        var duration = body.End - body.Start;
+        if (!IsValidDuration(duration))
+            return Error(StatusCodes.Status400BadRequest, "InvalidDuration", "Duración debe estar entre 10 y 120 minutos.");
 
         if (!IsWithinWorkingHours(body.Start, body.End))
-            return BadRequest(new { error = "OutOfWorkingHours", message = "Horario debe estar entre 08:00 y 20:00." });
+            return Error(StatusCodes.Status400BadRequest, "OutOfWorkingHours", "Horario debe estar entre 08:00 y 20:00.");
 
         var overlaps = await _db.Appointments.AnyAsync(a =>
             a.Id != id &&
@@ -177,7 +170,7 @@ public class AppointmentsController : ControllerBase
             body.Start < a.End && body.End > a.Start
         );
         if (overlaps)
-            return Conflict(new { error = "Overlap", message = "El doctor ya tiene una cita en ese rango." });
+            return Error(StatusCodes.Status409Conflict, "Overlap", "El doctor ya tiene una cita en ese rango.");
 
         var prevStart = appt.Start;
         var prevEnd = appt.End;
@@ -186,48 +179,36 @@ public class AppointmentsController : ControllerBase
         appt.End = body.End;
         await _db.SaveChangesAsync();
 
-        return Ok(new
+        return Success(new
         {
             id = appt.Id,
             previousStart = prevStart,
             previousEnd = prevEnd,
             newStart = appt.Start,
-            newEnd = appt.End,
-            message = "Cita reprogramada exitosamente."
-        });
+            newEnd = appt.End
+        }, "Cita reprogramada exitosamente.");
     }
 
-    // GET /api/appointments/{id}
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<AppointmentDto>> GetById(int id)
+    // Helpers
+    private static AppointmentDto ToDto(Appointment a) => new()
     {
-        var a = await _db.Appointments
-            .Include(x => x.Patient).ThenInclude(p => p.User)
-            .Include(x => x.Doctor).ThenInclude(d => d.User)
-            .Where(x => x.Id == id)
-            .Select(a => new AppointmentDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = a.Patient.User.Name,
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.User.Name,
-                Start = a.Start,
-                End = a.End,
-                TriageLevel = a.TriageLevel,
-                TriageNotes = a.TriageNotes
-            })
-            .FirstOrDefaultAsync();
-
-        return a is null ? NotFound() : Ok(a);
-    }
+        Id = a.Id,
+        PatientId = a.PatientId,
+        PatientName = a.Patient.User.Name,
+        DoctorId = a.DoctorId,
+        DoctorName = a.Doctor.User.Name,
+        Start = a.Start,
+        End = a.End,
+        TriageLevel = a.TriageLevel,
+        TriageNotes = a.TriageNotes
+    };
 
     private static bool IsWithinWorkingHours(DateTime start, DateTime end)
     {
         var startTime = start.TimeOfDay;
         var endTime = end.TimeOfDay;
-        var open = new TimeSpan(8, 0, 0);   // 08:00
-        var close = new TimeSpan(20, 0, 0); // 20:00
+        var open = new TimeSpan(8, 0, 0);
+        var close = new TimeSpan(20, 0, 0);
         return startTime >= open && endTime <= close;
     }
 
@@ -235,4 +216,26 @@ public class AppointmentsController : ControllerBase
     {
         return duration >= TimeSpan.FromMinutes(10) && duration <= TimeSpan.FromMinutes(120);
     }
+
+    private static string StatusToString(AppointmentStatus s) => s switch
+    {
+        AppointmentStatus.Scheduled => "Programada",
+        AppointmentStatus.Completed => "Completada",
+        AppointmentStatus.Cancelled => "Cancelada",
+        _ => s.ToString()
+    };
+
+    private static string BuildStatusMessage(AppointmentStatus status) => status switch
+    {
+        AppointmentStatus.Cancelled => "Cita cancelada.",
+        AppointmentStatus.Completed => "Cita marcada como completada.",
+        AppointmentStatus.Scheduled => "Cita marcada como programada.",
+        _ => "Estado actualizado."
+    };
+
+    private ObjectResult Error(int statusCode, string code, string message, object? data = null)
+        => StatusCode(statusCode, new ErrorResponse(code, message, data));
+
+    private OkObjectResult Success<T>(T data, string message)
+        => Ok(new SuccessResponse<T>(data, message));
 }
