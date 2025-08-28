@@ -99,25 +99,15 @@ app.MapControllers();
 // ping de salud
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// ==== Seed de datos demo ====
+// ==== Seed de datos demo (migrar + poblar) ====
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync(); // aplica migraciones pendientes
 
-    if (!db.Users.Any())
-    {
-        var uPatient = new User { Name = "Paciente Demo", Email = "paciente@demo.com", Role = UserRole.Patient };
-        var uDoctor = new User { Name = "Doctor Demo", Email = "doctor@demo.com", Role = UserRole.Doctor };
-        db.Users.AddRange(uPatient, uDoctor);
-        await db.SaveChangesAsync();
-
-        var p = new Patient { UserId = uPatient.Id, DateOfBirth = new DateTime(1990, 1, 1) };
-        var d = new Doctor { UserId = uDoctor.Id, Specialty = "Medicina General", Center = "Clínica Demo" };
-        db.Patients.Add(p);
-        db.Doctors.Add(d);
-        await db.SaveChangesAsync();
-        // PatientId=1 y DoctorId=1 (probablemente)
-    }
+    // Usar force:true para ver datos inmediatamente. Cambia a false cuando ya no quieras re-sembrar.
+    //TODO 
+    await DbSeeder.SeedAsync(db, doctors: 18, patients: 80, maxAppointmentsPerPatient: 3, force: false);
 }
 
 app.Run();
