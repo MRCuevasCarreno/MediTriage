@@ -1,11 +1,14 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using MediTriage.Api.Data;
 using MediTriage.Api.Dtos;
-using MediTriage.Api.Models;
-using MediTriage.Api.Middleware; // <-- para UseGlobalExceptionHandling()
+using MediTriage.Api.Middleware; // UseGlobalExceptionHandling()
+using MediTriage.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +27,28 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "MediTriage API", Version = "v1" });
+
+    // JWT en Swagger
+    var jwtScheme = new OpenApiSecurityScheme
+    {
+        BearerFormat = "JWT",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = JwtBearerDefaults.AuthenticationScheme,
+        Description = "Usa: Bearer {tu_token_jwt}",
+        Reference = new OpenApiReference
+        {
+            Id = JwtBearerDefaults.AuthenticationScheme,
+            Type = ReferenceType.SecurityScheme
+        }
+    };
+
+    c.AddSecurityDefinition(jwtScheme.Reference.Id, jwtScheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { jwtScheme, Array.Empty<string>() }
+    });
 });
 
 // ==== DbContext ====
@@ -61,6 +86,33 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
+// ==== JWT Auth ====
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "CAMBIA_ESTA_CLAVE_ULTRA_SECRETA_32+_CARACTERES";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MediTriage";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MediTriage";
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// Token service
+builder.Services.AddScoped<ITokenService, TokenService>();
+
 var app = builder.Build();
 
 // ==== Swagger solo en Desarrollo ====
@@ -77,10 +129,14 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("frontend");
 
-// ==== Manejador global de excepciones (500 → ErrorResponse) ====
+// ==== Excepciones globales ====
 app.UseGlobalExceptionHandling();
 
-// ==== (Opcional) 404 homogéneo para rutas inexistentes ====
+// ==== AuthZ ====
+app.UseAuthentication();
+app.UseAuthorization();
+
+// ==== 404 homogéneo ====
 app.Use(async (ctx, next) =>
 {
     await next();
@@ -96,20 +152,15 @@ app.Use(async (ctx, next) =>
 // ==== Endpoints ====
 app.MapControllers();
 
-// ping de salud
+// ping
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// ==== Seed de datos demo (migrar + poblar) ====
+// ==== Seed ====
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync(); // aplica migraciones pendientes
-
-    // Usar force:true para ver datos inmediatamente. Cambia a false cuando ya no quieras re-sembrar.
-    //TODO cambiar force a true cuando se requiera rellenar base de datos con citas, doctores y pacientes
+    await db.Database.MigrateAsync();
     await DbSeeder.SeedAsync(db, doctors: 18, patients: 80, maxAppointmentsPerPatient: 3, force: false);
 }
 
 app.Run();
-
-// https://localhost:7290/swagger
