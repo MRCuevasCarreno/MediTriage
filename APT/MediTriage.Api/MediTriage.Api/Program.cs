@@ -106,7 +106,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync(); // aplica migraciones pendientes
 
     // Usar force:true para ver datos inmediatamente. Cambia a false cuando ya no quieras re-sembrar.
-    //TODO 
+    //TODO cambiar force a true cuando se requiera rellenar base de datos con citas, doctores y pacientes
     await DbSeeder.SeedAsync(db, doctors: 18, patients: 80, maxAppointmentsPerPatient: 3, force: false);
 }
 
