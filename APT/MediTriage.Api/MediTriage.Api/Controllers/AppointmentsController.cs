@@ -25,7 +25,8 @@ public class AppointmentsController : ControllerBase
     public async Task<ActionResult> Get(
     [FromQuery] int? doctorId,
     [FromQuery] int? patientId,
-    [FromQuery] DateTime? date)
+    [FromQuery] DateTime? date,
+    [FromQuery] PaginationQuery query) // <-- agregado)
     {
         var role = GetRole();
         var userId = GetUserId();

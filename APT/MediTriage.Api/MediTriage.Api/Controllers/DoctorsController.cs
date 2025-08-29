@@ -44,14 +44,34 @@ public class DoctorsController : ControllerBase
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Get()
+    public async Task<ActionResult> Get([FromQuery] PaginationQuery query) // <-- agregado
     {
-        var list = await _db.Doctors
+        var q = _db.Doctors
             .Include(d => d.User)
+            .AsQueryable();
+
+        var sortBy = (query.SortBy ?? "name").ToLowerInvariant();
+        var desc = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+        q = sortBy switch
+        {
+            "name" => desc ? q.OrderByDescending(d => d.User.Name) : q.OrderBy(d => d.User.Name),
+            "specialty" => desc ? q.OrderByDescending(d => d.Specialty) : q.OrderBy(d => d.Specialty),
+            "id" => desc ? q.OrderByDescending(d => d.Id) : q.OrderBy(d => d.Id),
+            _ => desc ? q.OrderByDescending(d => d.User.Name) : q.OrderBy(d => d.User.Name),
+        };
+
+        var total = await q.CountAsync();
+
+        var data = await q
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
             .Select(d => new DoctorListDto { Id = d.Id, Name = d.User.Name, Specialty = d.Specialty })
             .ToListAsync();
 
-        return Success(list, "Listado de doctores.");
+        return Ok(new SuccessResponse<PagedResponse<DoctorListDto>>(
+            new PagedResponse<DoctorListDto>(data, query.PageNumber, query.PageSize, total),
+            "Listado de doctores (paginado)."));
     }
 
     [HttpGet("{id:int}")]
