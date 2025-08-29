@@ -262,6 +262,50 @@ public class AppointmentsController : ControllerBase
         }, "Cita reprogramada exitosamente.");
     }
 
+    // REPORTES --------------------------
+
+    // GET /api/appointments/reports/by-day
+    [HttpGet("reports/by-day")]
+    [Authorize(Roles = "Admin,Doctor")]
+    public async Task<ActionResult> GetReportByDay()
+    {
+        var data = await _db.Appointments
+            .GroupBy(a => a.Start.Date)
+            .Select(g => new { date = g.Key, count = g.Count() })
+            .OrderBy(r => r.date)
+            .ToListAsync();
+
+        return Success(data, "Cantidad de citas agrupadas por día.");
+    }
+
+    // GET /api/appointments/reports/by-doctor
+    [HttpGet("reports/by-doctor")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult> GetReportByDoctor()
+    {
+        var data = await _db.Appointments
+            .Include(a => a.Doctor).ThenInclude(d => d.User)
+            .GroupBy(a => a.Doctor.User.Name)
+            .Select(g => new { doctorName = g.Key, count = g.Count() })
+            .OrderByDescending(r => r.count)
+            .ToListAsync();
+
+        return Success(data, "Cantidad de citas agrupadas por doctor.");
+    }
+
+    // GET /api/appointments/reports/by-status
+    [HttpGet("reports/by-status")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult> GetReportByStatus()
+    {
+        var data = await _db.Appointments
+            .GroupBy(a => a.Status)
+            .Select(g => new { status = g.Key.ToString(), count = g.Count() })
+            .OrderBy(r => r.status)
+            .ToListAsync();
+
+        return Success(data, "Cantidad de citas agrupadas por estado.");
+    }
 
     // Helpers
     private static AppointmentDto ToDto(Appointment a) => new()
