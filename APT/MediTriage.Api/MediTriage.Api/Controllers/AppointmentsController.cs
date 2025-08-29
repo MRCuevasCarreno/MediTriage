@@ -1,12 +1,17 @@
 ﻿using MediTriage.Api.Data;
 using MediTriage.Api.Dtos;
 using MediTriage.Api.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt; // para JwtRegisteredClaimNames.Sub
+
 
 namespace MediTriage.Api.Controllers;
 
+[Authorize] // todos los métodos requieren token salvo que se anule con AllowAnonymous
 [ApiController]
 [Route("api/[controller]")]
 public class AppointmentsController : ControllerBase
@@ -14,19 +19,35 @@ public class AppointmentsController : ControllerBase
     private readonly AppDbContext _db;
     public AppointmentsController(AppDbContext db) => _db = db;
 
-    // GET /api/appointments?doctorId=&patientId=&date=
     [HttpGet]
+    [Authorize] // cualquier autenticado, pero filtramos por rol/propiedad
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<ActionResult> Get(
-        [FromQuery] int? doctorId,
-        [FromQuery] int? patientId,
-        [FromQuery] DateTime? date)
+    [FromQuery] int? doctorId,
+    [FromQuery] int? patientId,
+    [FromQuery] DateTime? date)
     {
+        var role = GetRole();
+        var userId = GetUserId();
+        if (userId is null) return Error(StatusCodes.Status401Unauthorized, "Unauthorized", "Usuario no válido.");
+
         var q = _db.Appointments
             .Include(a => a.Patient).ThenInclude(p => p.User)
             .Include(a => a.Doctor).ThenInclude(d => d.User)
             .AsQueryable();
 
+        // Filtro por dueño
+        if (role == "Doctor")
+        {
+            q = q.Where(a => a.Doctor.UserId == userId);
+        }
+        else if (role == "Patient")
+        {
+            q = q.Where(a => a.Patient.UserId == userId);
+        }
+        // Admin no se filtra
+
+        // Filtros opcionales existentes
         if (doctorId.HasValue) q = q.Where(a => a.DoctorId == doctorId.Value);
         if (patientId.HasValue) q = q.Where(a => a.PatientId == patientId.Value);
         if (date.HasValue)
@@ -40,26 +61,39 @@ public class AppointmentsController : ControllerBase
         return Success(list, "Listado de citas.");
     }
 
+
     // GET /api/appointments/{id}
     [HttpGet("{id:int}")]
+    [Authorize]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
     public async Task<ActionResult> GetById(int id)
     {
-        var dto = await _db.Appointments
+        var role = GetRole();
+        var userId = GetUserId();
+        if (userId is null) return Error(StatusCodes.Status401Unauthorized, "Unauthorized", "Usuario no válido.");
+
+        var q = _db.Appointments
             .Include(x => x.Patient).ThenInclude(p => p.User)
             .Include(x => x.Doctor).ThenInclude(d => d.User)
-            .Where(x => x.Id == id)
-            .Select(a => ToDto(a))
-            .FirstOrDefaultAsync();
+            .Where(x => x.Id == id);
+
+        if (role == "Doctor")
+            q = q.Where(a => a.Doctor.UserId == userId);
+        else if (role == "Patient")
+            q = q.Where(a => a.Patient.UserId == userId);
+
+        var dto = await q.Select(a => ToDto(a)).FirstOrDefaultAsync();
 
         return dto is null
-            ? Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada.")
+            ? Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada o sin permisos.")
             : Success(dto, "Cita encontrada.");
     }
 
+
     // POST /api/appointments
     [HttpPost]
+    [Authorize(Roles = "Patient,Admin")]
     [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
@@ -74,6 +108,18 @@ public class AppointmentsController : ControllerBase
 
         if (!IsWithinWorkingHours(request.Start, request.End))
             return Error(StatusCodes.Status400BadRequest, "OutOfWorkingHours", "Horario debe estar entre 08:00 y 20:00.");
+
+        // Si es Patient, debe crear solo para SU PatientId
+        var role = GetRole();
+        if (role == "Patient")
+        {
+            var userId = GetUserId();
+            if (userId is null) return Error(StatusCodes.Status401Unauthorized, "Unauthorized", "Usuario no válido.");
+
+            var myPatientId = await _db.Patients.Where(p => p.UserId == userId).Select(p => p.Id).FirstOrDefaultAsync();
+            if (myPatientId == 0 || myPatientId != request.PatientId)
+                return Error(StatusCodes.Status403Forbidden, "Forbidden", "No puedes crear citas para otros pacientes.");
+        }
 
         var overlaps = await _db.Appointments.AnyAsync(a =>
             a.DoctorId == request.DoctorId &&
@@ -108,16 +154,29 @@ public class AppointmentsController : ControllerBase
             new SuccessResponse<AppointmentDto>(dto, "Cita creada exitosamente."));
     }
 
+
     // PATCH /api/appointments/{id}/status
     [HttpPatch("{id:int}/status")]
+    [Authorize(Roles = "Doctor,Admin")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] AppointmentStatusUpdateDto body)
     {
-        var appt = await _db.Appointments.FindAsync(id);
+        var appt = await _db.Appointments
+            .Include(a => a.Doctor).ThenInclude(d => d.User)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
         if (appt is null)
             return Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada.");
+
+        // Si es Doctor, debe ser su cita
+        if (GetRole() == "Doctor")
+        {
+            var userId = GetUserId();
+            if (userId is null || appt.Doctor.UserId != userId)
+                return Error(StatusCodes.Status403Forbidden, "Forbidden", "No puedes actualizar citas de otros doctores.");
+        }
 
         if (!Enum.IsDefined(typeof(AppointmentStatus), body.Status))
             return Error(StatusCodes.Status400BadRequest, "InvalidStatus", "Estado inválido.");
@@ -141,17 +200,30 @@ public class AppointmentsController : ControllerBase
         }, BuildStatusMessage(next));
     }
 
+
     // PUT /api/appointments/{id}/reschedule
     [HttpPut("{id:int}/reschedule")]
+    [Authorize(Roles = "Patient,Admin")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Reschedule(int id, [FromBody] AppointmentRescheduleDto body)
     {
-        var appt = await _db.Appointments.FindAsync(id);
+        var appt = await _db.Appointments
+            .Include(a => a.Patient).ThenInclude(p => p.User)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
         if (appt is null)
             return Error(StatusCodes.Status404NotFound, "NotFound", "Cita no encontrada.");
+
+        // Si es Patient, solo si la cita es suya
+        if (GetRole() == "Patient")
+        {
+            var userId = GetUserId();
+            if (userId is null || appt.Patient.UserId != userId)
+                return Error(StatusCodes.Status403Forbidden, "Forbidden", "No puedes reagendar citas de otros pacientes.");
+        }
 
         if (body.End <= body.Start)
             return Error(StatusCodes.Status400BadRequest, "InvalidRange", "Fin debe ser mayor que inicio.");
@@ -188,6 +260,7 @@ public class AppointmentsController : ControllerBase
             newEnd = appt.End
         }, "Cita reprogramada exitosamente.");
     }
+
 
     // Helpers
     private static AppointmentDto ToDto(Appointment a) => new()
@@ -238,4 +311,13 @@ public class AppointmentsController : ControllerBase
 
     private OkObjectResult Success<T>(T data, string message)
         => Ok(new SuccessResponse<T>(data, message));
+    private int? GetUserId()
+    {
+        var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(sub, out var id) ? id : null;
+    }
+
+    private string? GetRole() => User.FindFirst(ClaimTypes.Role)?.Value;
+
 }
