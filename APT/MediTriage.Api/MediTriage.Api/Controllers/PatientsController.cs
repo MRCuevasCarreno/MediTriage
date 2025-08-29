@@ -45,14 +45,33 @@ public class PatientsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Get()
+    public async Task<ActionResult> Get([FromQuery] PaginationQuery query) // <-- agregado
     {
-        var list = await _db.Patients
+        var q = _db.Patients
             .Include(p => p.User)
+            .AsQueryable();
+
+        var sortBy = (query.SortBy ?? "name").ToLowerInvariant();
+        var desc = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+        q = sortBy switch
+        {
+            "name" => desc ? q.OrderByDescending(p => p.User.Name) : q.OrderBy(p => p.User.Name),
+            "id" => desc ? q.OrderByDescending(p => p.Id) : q.OrderBy(p => p.Id),
+            _ => desc ? q.OrderByDescending(p => p.User.Name) : q.OrderBy(p => p.User.Name),
+        };
+
+        var total = await q.CountAsync();
+
+        var data = await q
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
             .Select(p => new PatientListDto { Id = p.Id, Name = p.User.Name })
             .ToListAsync();
 
-        return Success(list, "Listado de pacientes.");
+        return Ok(new SuccessResponse<PagedResponse<PatientListDto>>(
+            new PagedResponse<PatientListDto>(data, query.PageNumber, query.PageSize, total),
+            "Listado de pacientes (paginado)."));
     }
 
     [HttpGet("{id:int}")]
