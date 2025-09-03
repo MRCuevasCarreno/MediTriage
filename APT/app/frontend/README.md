@@ -67,3 +67,10 @@ export default tseslint.config([
   },
 ])
 ```
+
+## Paso 9 — Integración pacientes/doctores
+
+- Configura `VITE_API_BASE_URL` en `.env` (por ejemplo: `http://localhost:5000`).
+- Si tus endpoints requieren token JWT, pega el token con `setAuthToken(...)` (o guarda `token` en `localStorage`).
+- Los selects de Paciente/Doctor se llenan con `GET /api/patients` y `GET /api/doctors`.
+- El código intenta des-encapsular respuestas tipo `T` o `{ data: T }` o `{ success, data: T }`.
