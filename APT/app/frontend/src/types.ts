@@ -9,3 +9,15 @@ export type Appointment = {
     triageNotes?: string;
   };
   
+export type BasicEntity = {
+  id: number;
+  name: string;
+};
+
+export type Patient = BasicEntity & {
+  // add fields as needed
+};
+
+export type Doctor = BasicEntity & {
+  // add fields as needed
+};
