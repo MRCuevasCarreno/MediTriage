@@ -1,0 +1,27 @@
+{
+  "name": "medi-triage-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^6.26.2",
+    "axios": "^1.11.0",
+    "jotai": "^2.13.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.13",
+    "postcss": "^8.5.6",
+    "autoprefixer": "^10.4.21",
+    "@vitejs/plugin-react-swc": "^4.0.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.5",
+    "eslint": "^9.33.0"
+  }
+}
