@@ -1,12 +1,22 @@
-# scripts/run-api.ps1
-$ErrorActionPreference = 'Stop'
-Set-Location -Path (Split-Path -Parent $MyInvocation.MyCommand.Path)
-Set-Location ..\Backend
+# run-api.ps1
+$ErrorActionPreference = "Stop"
 
+$root = Split-Path -Parent $PSScriptRoot
+$proj = Join-Path $root "Backend\MediTriage.Api.csproj"
+
+if (-not (Test-Path $proj)) {
+  throw "No encuentro el proyecto en: $proj"
+}
+
+Write-Host "API -> $proj"
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-# Si decides usar 5000/5001:
-$env:ASPNETCORE_URLS = "http://localhost:5000;https://localhost:5001"
 
-dotnet restore
-dotnet ef database update
-dotnet run
+dotnet restore "$proj"
+
+# Asegura dotnet-ef (si falta)
+try { dotnet ef --version | Out-Null } catch { dotnet tool install --global dotnet-ef }
+
+dotnet ef database update --project "$proj" --startup-project "$proj"
+
+# 👇 Fuerza el mismo puerto que usaste manualmente
+dotnet run --project "$proj" -- --urls "http://localhost:5000"

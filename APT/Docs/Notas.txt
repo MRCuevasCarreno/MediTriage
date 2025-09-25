@@ -1,0 +1,16 @@
+# Consola 1: API
+cd C:\Users\raulb\Escritorio\CAPSTONE\MediTriage\APT\scripts
+Set-ExecutionPolicy -Scope Process Bypass
+Unblock-File .\run-api.ps1
+.\run-api.ps1
+
+# Deberías ver http://localhost:5000 y Swagger en /swagger
+
+# Consola 2: Front
+cd C:\Users\raulb\Escritorio\CAPSTONE\MediTriage\APT\scripts
+Set-ExecutionPolicy -Scope Process Bypass
+Unblock-File .\run-front.ps1
+.\run-front.ps1
+
+o
+npm run dev
