@@ -79,6 +79,14 @@ function Navbar(){
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const role = auth.role;
+  // Leer nombre del usuario si está logueado
+  let userName = "";
+  if (auth.token) {
+    try {
+      const user = JSON.parse(localStorage.getItem("mt_user") || "{}");
+      userName = user.fullName || user.name || user.email || "";
+    } catch {}
+  }
   return (
     <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
       <Container>
@@ -112,6 +120,9 @@ function Navbar(){
           </nav>
 
           <div className="flex items-center gap-3">
+            {auth.token && userName && (
+              <span className="text-sm font-medium text-gray-700">{userName}</span>
+            )}
             {!auth.token ? (
               <>
                 <Link to="/login" className="text-sm underline">Entrar</Link>
@@ -119,7 +130,7 @@ function Navbar(){
               </>
             ) : (
               <button
-                onClick={()=>{ auth.token = null; auth.role = null; navigate("/"); }}
+                onClick={()=>{ auth.token = null; auth.role = null; localStorage.removeItem("mt_user"); navigate("/"); }}
                 className="text-sm rounded-xl px-3 py-1.5 border"
               >Salir</button>
             )}
@@ -194,10 +205,26 @@ function Login(){
     e.preventDefault();
     try{
       setError(null);
-      // En real: const res = await api.login(email, password); auth.token=res.token; auth.role=res.role;
-      auth.token = "devtoken";
-      auth.role = email.includes("doctor") ? "doctor" : email.includes("admin") ? "admin" : "patient";
-      nav(from, { replace: true });
+      // Llamar API real de login
+      const res = await fetch("https://localhost:7290/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Error de autenticación");
+      }
+      const data = await res.json();
+  // Guardar token y rol si vienen en la respuesta
+  auth.token = data.token || data.accessToken || null;
+  auth.role = data.role || data.Role || (email.includes("doctor") ? "doctor" : email.includes("admin") ? "admin" : "patient");
+  // Guardar todo el usuario en localStorage (demo)
+  localStorage.setItem("mt_user", JSON.stringify(data));
+  nav(from, { replace: true });
     }catch(err:any){ setError(err.message); }
   }
 
