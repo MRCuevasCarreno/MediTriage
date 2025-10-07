@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MediTriage.Api.Data;
@@ -112,7 +113,7 @@ builder.Services.AddAuthorization();
 
 // Token service
 builder.Services.AddScoped<ITokenService, TokenService>();
-
+builder.Services.AddHttpClient();
 var app = builder.Build();
 
 // ==== Swagger solo en Desarrollo ====
