@@ -9,8 +9,8 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(
         AppDbContext db,
-        int doctors = 15,
-        int patients = 60,
+        int doctors = 18,
+        int patients = 80,
         int maxAppointmentsPerPatient = 3,
         bool force = false)
     {
@@ -46,15 +46,32 @@ public static class DbSeeder
         const string DEMO_PASS = "Demo123!";
         var demoHash = BCrypt.Net.BCrypt.HashPassword(DEMO_PASS);
 
+        // Antes de generar usuarios, carga los correos existentes
+        var usedEmails = new HashSet<string>(
+            await db.Users.Select(u => u.Email).ToListAsync()
+        );
+
         var userDoctorFaker = new Faker<User>("es")
             .RuleFor(u => u.Name, f => $"{f.Name.FirstName()} {f.Name.LastName()}")
-            .RuleFor(u => u.Email, (f, u) => $"{u.Name.Replace(' ', '.').ToLower()}{f.Random.Int(10, 999)}@meditriage.cl")
+            .RuleFor(u => u.Email, (f, u) => {
+                string email;
+                do {
+                    email = $"{u.Name.Replace(' ', '.').ToLower()}{f.Random.Int(10, 999)}@meditriage.cl";
+                } while (!usedEmails.Add(email));
+                return email;
+            })
             .RuleFor(u => u.Role, _ => UserRole.Doctor)
             .RuleFor(u => u.PasswordHash, _ => demoHash);
 
         var userPatientFaker = new Faker<User>("es")
             .RuleFor(u => u.Name, f => $"{f.Name.FirstName()} {f.Name.LastName()}")
-            .RuleFor(u => u.Email, (f, u) => $"{u.Name.Replace(' ', '.').ToLower()}{f.Random.Int(10, 999)}@example.com")
+            .RuleFor(u => u.Email, (f, u) => {
+                string email;
+                do {
+                    email = $"{u.Name.Replace(' ', '.').ToLower()}{f.Random.Int(10, 999)}@example.com";
+                } while (!usedEmails.Add(email));
+                return email;
+            })
             .RuleFor(u => u.Role, _ => UserRole.Patient)
             .RuleFor(u => u.PasswordHash, _ => demoHash);
 
@@ -81,6 +98,27 @@ public static class DbSeeder
 
         await db.Doctors.AddRangeAsync(doctorsList);
         await db.Patients.AddRangeAsync(patientsList);
+        await db.SaveChangesAsync();
+
+        // Sucursales de ejemplo
+        var sucursalNames = new[]
+        {
+            "Urgencia Lampa",
+            "Urgencia Cesfam",
+            "Clínica Central",
+            "Hospital Regional",
+            "CESFAM Batuco"
+        };
+
+        var sucursalesList = sucursalNames.Select((name, idx) => new Sucursal
+        {
+            Nombre = name,
+            Direccion = $"Dirección {idx + 1}",
+            Comuna = "Lampa",
+            Doctors = doctorsList.Skip(idx * 3).Take(3).ToList() // Asigna 3 doctores por sucursal
+        }).ToList();
+
+        await db.Sucursales.AddRangeAsync(sucursalesList);
         await db.SaveChangesAsync();
 
         var triage = new[] { "LOW", "MEDIUM", "HIGH" };

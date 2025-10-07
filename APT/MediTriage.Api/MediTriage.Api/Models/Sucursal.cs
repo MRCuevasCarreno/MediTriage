@@ -14,7 +14,6 @@ public class Sucursal
     [Required, MaxLength(80)]
     public string Comuna { get; set; } = string.Empty;
 
-    // Relación: un doctor atiende en la sucursal
-    public int? DoctorId { get; set; }
-    public Doctor? Doctor { get; set; }
+    // Relación: una sucursal puede tener varios doctores
+    public ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
 }

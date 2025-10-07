@@ -22,27 +22,28 @@ public class SucursalesController : ControllerBase
     public async Task<ActionResult> Get()
     {
         var sucursales = await _db.Sucursales
-            .Include(s => s.Doctor).ThenInclude(d => d.User)
+            .Include(s => s.Doctors)
+                .ThenInclude(d => d.User)
             .Select(s => new SucursalDto
             {
                 Id = s.Id,
                 Nombre = s.Nombre,
                 Direccion = s.Direccion,
                 Comuna = s.Comuna,
-                Doctor = s.Doctor != null ? new DoctorDto
+                Doctors = s.Doctors.Select(d => new DoctorDto
                 {
-                    Id = s.Doctor.Id,
-                    UserId = s.Doctor.UserId,
-                    Specialty = s.Doctor.Specialty,
-                    Center = s.Doctor.Center,
+                    Id = d.Id,
+                    UserId = d.UserId,
+                    Specialty = d.Specialty,
+                    Center = d.Center,
                     User = new UserDto
                     {
-                        Id = s.Doctor.User.Id,
-                        Name = s.Doctor.User.Name,
-                        Email = s.Doctor.User.Email,
-                        Role = s.Doctor.User.Role.ToString()
+                        Id = d.User.Id,
+                        Name = d.User.Name,
+                        Email = d.User.Email,
+                        Role = d.User.Role.ToString()
                     }
-                } : null
+                }).ToList()
             })
             .ToListAsync();
 
@@ -78,7 +79,7 @@ public class SucursalesController : ControllerBase
             Nombre = sucursal.Nombre,
             Direccion = sucursal.Direccion,
             Comuna = sucursal.Comuna,
-            Doctor = null
+            Doctors = new List<DoctorDto>()
         };
 
         return CreatedAtAction(nameof(Get), new { id = sucursal.Id }, new SuccessResponse<SucursalDto>(result, "Sucursal creada exitosamente."));
@@ -111,7 +112,9 @@ public class SucursalesController : ControllerBase
         if (dto.IdDoctor <= 0 || dto.IdSucursal <= 0)
             return Error(StatusCodes.Status400BadRequest, "InvalidInput", "IdDoctor e IdSucursal deben ser válidos.");
 
-        var sucursal = await _db.Sucursales.FindAsync(dto.IdSucursal);
+        var sucursal = await _db.Sucursales
+            .Include(s => s.Doctors)
+            .FirstOrDefaultAsync(s => s.Id == dto.IdSucursal);
         if (sucursal == null)
             return Error(StatusCodes.Status404NotFound, "SucursalNotFound", "Sucursal no encontrada.");
 
@@ -119,7 +122,9 @@ public class SucursalesController : ControllerBase
         if (doctor == null)
             return Error(StatusCodes.Status404NotFound, "DoctorNotFound", "Doctor no encontrado.");
 
-        sucursal.DoctorId = dto.IdDoctor;
+        if (!sucursal.Doctors.Any(d => d.Id == doctor.Id))
+            sucursal.Doctors.Add(doctor);
+
         await _db.SaveChangesAsync();
 
         var response = new[]

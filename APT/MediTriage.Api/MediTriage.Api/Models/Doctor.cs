@@ -6,8 +6,9 @@ public class Doctor
 {
     public int Id { get; set; }
     public int UserId { get; set; }
-    public string Specialty { get; set; } = "Medicina General";
+    public string Specialty { get; set; } = string.Empty;
     public string? Center { get; set; }
     [JsonIgnore] public User User { get; set; } = null!;
     [JsonIgnore] public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    public ICollection<Sucursal> Sucursales { get; set; } = new List<Sucursal>();
 }
