@@ -65,10 +65,10 @@ const api = {
    ================================ */
 function Protected({ roles, children }:{ roles?: ("patient"|"doctor"|"admin")[], children: React.ReactNode }){
   const isLogged = Boolean(auth.token);
-  const role = auth.role;
+  const role = auth.role as "patient"|"doctor"|"admin"|null;
   const location = useLocation();
   if(!isLogged) return <Navigate to="/login" state={{ from: location }} replace/>;
-  if(roles && role && !roles.includes(role)) return <Navigate to="/" replace/>;
+  if(roles && (!role || !roles.includes(role))) return <Navigate to="/" replace/>;
   return <>{children}</>;
 }
 
@@ -543,21 +543,63 @@ function AgendarInvitado() {
     { id: "tele",    name: "Telemedicina",      description: "Atención en línea.",                    icon: "💻" },
   ];
 
-  const centers: Center[] = [
-    { id: "c1", name: "Centro Salud Providencia", city: "Santiago", address: "Av. Providencia 1234" },
-    { id: "c2", name: "Clínica Las Condes Sede Apoquindo", city: "Santiago", address: "Apoquindo 4500" },
-    { id: "c3", name: "Hospital Regional Valparaíso", city: "Valparaíso", address: "Cerro S/N" },
-    { id: "c4", name: "Centro Kinesiológico Ñuñoa", city: "Santiago", address: "Irarrázaval 2200" },
-  ];
+  // Estado para sucursales y doctores
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [centersLoaded, setCentersLoaded] = useState(false);
 
-  const professionals: Professional[] = [
-    { id: "p1", name: "Dra. María González",  centerId: "c1", services: ["med-gen", "derm"] },
-    { id: "p2", name: "Dr. Pedro Silva",      centerId: "c1", services: ["cardio"] },
-    { id: "p3", name: "Dra. Daniela Soto",    centerId: "c2", services: ["med-gen", "pedi"] },
-    { id: "p4", name: "Dr. Andrés Riquelme",  centerId: "c3", services: ["cardio", "med-gen"] },
-    { id: "p5", name: "Kine. Felipe Torres",  centerId: "c4", services: ["kine"] },
-    { id: "p6", name: "Dra. Online",          centerId: "c2", services: ["tele"] },
-  ];
+  // Obtener sucursales y doctores desde API (timeout 3s)
+  useEffect(() => {
+    let didTimeout = false;
+    setCentersLoaded(false);
+    const timeout = setTimeout(() => {
+      didTimeout = true;
+      setCentersLoaded(true); // Usar locales si falla
+    }, 3000);
+    fetch("https://localhost:7290/api/Sucursales", { headers: { accept: "application/json" } })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Error API");
+        const json = await res.json();
+        // Si la respuesta es la nueva estructura de sucursales con doctores
+        if (!didTimeout && Array.isArray(json?.data)) {
+          const apiCenters = json.data.map((c: any) => ({
+            id: String(c.id),
+            name: c.nombre,
+            city: c.comuna,
+            address: c.direccion
+          }));
+          setCenters(apiCenters);
+          // Mapear doctores a Professional[]
+          const apiProfessionals = json.data.flatMap((c: any) =>
+            (c.doctors || []).map((d: any) => ({
+              id: String(d.id),
+              name: d.user?.name || d.name,
+              centerId: String(c.id),
+              services: [
+                d.specialty === "Medicina General" ? "med-gen" :
+                d.specialty === "Dermatología" ? "derm" :
+                d.specialty === "Cardiología" ? "cardio" :
+                d.specialty === "Pediatría" ? "pedi" :
+                d.specialty === "Kinesiología" ? "kine" :
+                d.specialty === "Telemedicina" ? "tele" :
+                d.specialty?.toLowerCase() || ""
+              ]
+            }))
+          );
+          setProfessionals(apiProfessionals);
+          setCentersLoaded(true);
+          clearTimeout(timeout);
+          console.log("Centros cargados:", apiCenters);
+          console.log("Profesionales cargados:", apiProfessionals);
+        }
+      })
+      .catch((err) => {
+        setCentersLoaded(true); // Usar locales si falla
+        clearTimeout(timeout);
+        console.error("Error al cargar centros desde API:", err);
+      });
+    return () => clearTimeout(timeout);
+  }, []);
 
   // ---- Estado del wizard ----
   const [step, setStep] = useState(1);
@@ -690,13 +732,15 @@ function AgendarInvitado() {
   }, [date, service?.id, centerId, professionalId]);
 
   // Derivados Paso 3
+  // Solo mostrar centros que tengan al menos un doctor con la especialidad seleccionada
   const prosForService = service
     ? professionals.filter(p => p.services.includes(service.id))
     : [];
 
-  const centerIdsOffering = new Set(prosForService.map(p => p.centerId));
-  let centersOffering = centers.filter(c => centerIdsOffering.has(c.id));
-
+  let centersOffering = centers.filter(center => {
+    // Buscar si hay al menos un profesional en este centro con la especialidad seleccionada
+    return prosForService.some(p => p.centerId === center.id);
+  });
   if (query.trim()) {
     const q = query.trim().toLowerCase();
     centersOffering = centersOffering.filter(c =>
@@ -918,7 +962,10 @@ function makeClientBookingId() {
                   <button
                     key={s.id}
                     type="button"
-                    onClick={()=>setService(s)}
+                    onClick={()=>{
+                      console.log("Seleccionando especialidad:", s);
+                      setService(s);
+                    }}
                     className={`text-left rounded-2xl border px-4 py-4 hover:bg-gray-50 transition ${selected ? "border-black ring-1 ring-black" : "border-gray-200"}`}
                   >
                     <div className="flex items-center gap-3">
@@ -935,7 +982,10 @@ function makeClientBookingId() {
 
             <div className="flex justify-between mt-4">
               <button className="rounded-xl px-4 py-2 border" onClick={()=>setStep(1)}>Atrás</button>
-              <button className="rounded-xl px-4 py-2 border" onClick={()=>{ if(service) { setCenterId(null); setProfessionalId(null); setStep(3); } }} disabled={!service}>Siguiente</button>
+              <button className="rounded-xl px-4 py-2 border" onClick={()=>{
+                console.log("Click Siguiente, service:", service);
+                if(service) { setCenterId(null); setProfessionalId(null); setStep(3); }
+              }} disabled={!service}>Siguiente</button>
             </div>
 
             {service && <p className="text-xs text-gray-500 mt-2">Seleccionado: <b>{service.name}</b></p>}
@@ -952,9 +1002,16 @@ function makeClientBookingId() {
             </div>
 
             <div className="space-y-3">
-              {centersOffering.length === 0 && <p className="text-sm text-gray-600">No hay centros que coincidan con tu búsqueda.</p>}
+              {/* Mensaje si no hay centros cargados desde la API */}
+              {!centersLoaded && <p className="text-sm text-gray-500">Cargando centros…</p>}
+              {centersLoaded && centers.length === 0 && (
+                <p className="text-sm text-red-600">No se pudo cargar ningún centro desde la API. Verifica la conexión o intenta más tarde.</p>
+              )}
+              {centersLoaded && centers.length > 0 && centersOffering.length === 0 && (
+                <p className="text-sm text-gray-600">No hay centros que coincidan con tu búsqueda.</p>
+              )}
 
-              {centersOffering.map(c => {
+              {centersLoaded && centersOffering.map(c => {
                 const selected = centerId === c.id;
                 const pros = prosByCenter(c.id);
                 return (
