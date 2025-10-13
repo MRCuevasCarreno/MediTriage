@@ -1,3 +1,4 @@
+import NavBar from '../../../components/NavBar';
 import { useState } from "react";
 import { api } from "../../../services/api";
 import { validateRut, formatRut, cleanRut } from "../../../Utils/rut";

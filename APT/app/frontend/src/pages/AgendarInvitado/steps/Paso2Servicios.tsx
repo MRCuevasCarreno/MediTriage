@@ -1,4 +1,5 @@
 import React from "react";
+import NavBar from '../../../components/NavBar';
 
 export default function Paso2Servicios({ onNext, onBack }: { onNext: (data: { servicioId: string }) => void, onBack: () => void }) {
   const servicios = [
@@ -12,6 +13,7 @@ export default function Paso2Servicios({ onNext, onBack }: { onNext: (data: { se
   const [selected, setSelected] = React.useState<string>("");
   return (
     <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
+      <NavBar />
       <h2 className="text-xl font-semibold mb-4">Selecciona el servicio</h2>
       <ul className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         {servicios.map(servicio => (

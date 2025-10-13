@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
-    <Layout>
       <div className="grid md:grid-cols-2 gap-6 items-center">
         <div className="space-y-4">
           <h1 className="text-3xl md:text-4xl font-bold leading-tight">Agenda con orientación inteligente</h1>
@@ -23,6 +22,5 @@ export default function Home() {
           </ul>
         </Card>
       </div>
-    </Layout>
   );
 }

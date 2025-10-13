@@ -18,7 +18,6 @@ export default function Doctor() {
     })();
   }, []);
   return (
-    <Layout>
       <div className="grid md:grid-cols-2 gap-4">
         <Card title="Agenda de hoy">
           <ul className="space-y-2 text-sm">
@@ -41,6 +40,5 @@ export default function Doctor() {
           </div>
         </Card>
       </div>
-    </Layout>
   );
 }

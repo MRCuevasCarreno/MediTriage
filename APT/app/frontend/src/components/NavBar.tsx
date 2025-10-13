@@ -9,9 +9,6 @@ export default function NavBar() {
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <strong>MediTriage</strong>
           <Link to="/">Inicio</Link>
-        <Link to="/app/doctors">Doctores</Link>
-        <Link to="/app/patients">Pacientes</Link>
-        <Link to="/app/appointments">Citas</Link>
       </div>
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         {user?.fullName && <span>👋 {user.fullName}</span>}

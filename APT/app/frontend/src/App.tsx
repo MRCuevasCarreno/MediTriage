@@ -1,6 +1,7 @@
 // Limpieza y estructura: solo router y helpers
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import ConfirmacionCita from "./pages/ConfirmacionCita";
 import Login from "./pages/Login";
@@ -16,18 +17,21 @@ import AgendarInvitado from "./pages/AgendarInvitado";
 export default function App() {
   return (
     <BrowserRouter>
-  <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-  <Route path="/agendar-invitado" element={<AgendarInvitado />} />
-  <Route path="/confirmacion-cita" element={<ConfirmacionCita />} />
-        <Route path="/book" element={<BookAppointment />} />
-        <Route path="/triage" element={<Triage />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/doctor" element={<Doctor />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="*" element={<NotFound />} />
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/agendar-invitado" element={<AgendarInvitado />} />
+          <Route path="/confirmacion-cita" element={<ConfirmacionCita />} />
+          <Route path="/book" element={<BookAppointment />} />
+          <Route path="/triage" element={<Triage />} />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/doctor" element={<Doctor />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+
       </Routes>
     </BrowserRouter>
   );
