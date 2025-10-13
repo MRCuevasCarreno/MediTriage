@@ -774,7 +774,40 @@ function AgendarInvitado() {
 
   useEffect(() => {
     setSelectedSlot(null);
-    setSlots(generateSlots(date, service?.id));
+    // Si hay doctor seleccionado, llamar API de calendario
+    async function fetchCalendar() {
+      if (professionalId && date) {
+        try {
+          // Obtener token del usuario logueado
+          const user = JSON.parse(localStorage.getItem("mt_user") || "{}");
+          const token = user.token || user.accessToken || "";
+          const res = await fetch("https://localhost:7290/api/Doctors/calendar", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ id: Number(professionalId), date })
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const api = await res.json();
+          // Mapear los horarios disponibles
+          const slotsApi = (api.data.appointmentsAvailable || []).map((slot: any) => ({
+            time: slot.startHour.slice(11,16),
+            label: slot.startHour.slice(11,16) + " - " + slot.finishHour.slice(11,16),
+            disabled: !slot.status
+          }));
+          setSlots(slotsApi);
+          return;
+        } catch (err) {
+          // Si falla, usar los slots mock
+          setSlots(generateSlots(date, service?.id));
+        }
+      } else {
+        setSlots(generateSlots(date, service?.id));
+      }
+    }
+    fetchCalendar();
   }, [date, service?.id, centerId, professionalId]);
 
   // Derivados Paso 3
@@ -1137,7 +1170,12 @@ function makeClientBookingId() {
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Horarios disponibles</label>
                 {!date && <p className="text-sm text-gray-500 mt-2">Selecciona una fecha para ver los horarios.</p>}
-                {date && slots.length === 0 && <p className="text-sm text-gray-500 mt-2">No hay horarios para este día.</p>}
+                {date && slots.length === 0 && (
+                  <div className="mt-2 rounded-xl bg-red-50 border border-red-300 px-4 py-2 text-red-700 flex items-center gap-2 animate-fade-in">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span className="font-semibold">No hay horarios disponibles para este día.</span>
+                  </div>
+                )}
                 {date && slots.length > 0 && (
                   <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                     {slots.map(s => {
@@ -1231,54 +1269,11 @@ function makeClientBookingId() {
               </div>
             </div>
 
-            {/* OTP */}
-            <div className="mt-4 rounded-2xl border px-4 py-3">
-              <p className="text-sm font-medium">Verificación (OTP)</p>
-              <p className="text-xs text-gray-500 mb-2">Te enviaremos un código por {validEmail ? "correo" : "SMS"} para validar la reserva.</p>
-
-              <div className="flex gap-2 items-center">
-                <button
-                  type="button"
-                  onClick={sendOtp}
-                  disabled={!validName || !hasSomeContact || otpVerified}
-                  className="rounded-xl px-3 py-1.5 border text-sm"
-                >
-                  {otpSent ? "Reenviar código" : "Enviar código"}
-                </button>
-
-                <input
-                  value={otpCode}
-                  onChange={(e)=>setOtpCode(e.target.value)}
-                  placeholder="Código"
-                  className="rounded-xl border px-3 py-1.5 text-sm"
-                  style={{width: 120}}
-                  disabled={!otpSent || otpVerified}
-                />
-
-                <button
-                  type="button"
-                  onClick={verifyOtp}
-                  disabled={!otpSent || !otpCode.trim() || otpVerified}
-                  className="rounded-xl px-3 py-1.5 border text-sm"
-                >
-                  Verificar
-                </button>
-              </div>
-
-              {!otpSent && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Si tu backend OTP aún no está listo, usa el <b>código DEV 123456</b> tras “Enviar código”.
-                </p>
-              )}
-              {otpVerified && <p className="text-xs text-green-600 mt-2">Código verificado ✅</p>}
-            </div>
-
-            {/* Consentimiento */}
-            <div className="mt-4 flex items-center gap-2">
-              <input id="consent" type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-              <label htmlFor="consent" className="text-sm">
-                Acepto los términos y el tratamiento de mis datos para gestionar mi reserva.
-              </label>
+            {/* Mensaje informativo OTP */}
+            <div className="mt-4 rounded-2xl bg-blue-50 border border-blue-300 px-4 py-3 text-blue-700 flex flex-col gap-2 animate-fade-in">
+              <span className="font-semibold">Verificación (OTP)</span>
+              <span>Te enviaremos un código por SMS para validar la reserva.</span>
+              <span>Si tu backend OTP aún no está listo, usa el código DEV 123456 tras “Enviar código”.</span>
             </div>
 
             {/* Acciones */}
@@ -1286,8 +1281,53 @@ function makeClientBookingId() {
               <button className="rounded-xl px-4 py-2 border" onClick={()=>setStep(4)}>Atrás</button>
               <button
                 className="rounded-xl px-4 py-2 border"
-                onClick={confirmBooking}
-                disabled={!validName || !hasSomeContact || !otpVerified || !consent || submitting}
+                onClick={async()=>{
+                  setSubmitting(true);
+                  try {
+                    // Obtener token del usuario logueado
+                    const user = JSON.parse(localStorage.getItem("mt_user") || "{}");
+                    const token = user.token || user.accessToken || "";
+                    // Obtener doctor seleccionado
+                    const doctorId = professionalId ? Number(professionalId) : null;
+                    // Obtener slot seleccionado (start y end)
+                    let start = "", end = "";
+                    if (selectedSlot && date) {
+                      // Buscar slot en slots
+                      const slotObj = slots.find(s => s.time === selectedSlot);
+                      if (slotObj && slotObj.label) {
+                        // label: "10:30 - 11:00"
+                        const [startHour, endHour] = slotObj.label.split(" - ");
+                        start = `${date}T${startHour}:00`;
+                        end = `${date}T${endHour}:00`;
+                      }
+                    }
+                    // Llamar API de reserva pública
+                    const res = await fetch("https://localhost:7290/api/Appointments/public", {
+                      method: "POST",
+                      headers: {
+                        "accept": "text/plain",
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                      },
+                      body: JSON.stringify({
+                        fullName: contact.name,
+                        email: contact.email,
+                        doctorId,
+                        start,
+                        end,
+                        triageLevel: "LOW",
+                        triageNotes: "TODO Triage IA"
+                      })
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    setDone({ bookingId: "OK" });
+                  } catch (err:any) {
+                    alert(err.message || "No se pudo reservar");
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={!contact.name || !validEmail || !professionalId || !selectedSlot || submitting}
               >
                 {submitting ? "Confirmando…" : "Confirmar reserva"}
               </button>
@@ -1300,7 +1340,6 @@ function makeClientBookingId() {
           <Card title="¡Reserva confirmada!">
             <p className="text-sm text-gray-700">
               Tu cita quedó registrada correctamente.
-              {done.bookingId && <> Código de reserva: <b>{done.bookingId}</b>.</>}
             </p>
             <ul className="text-sm list-disc ml-5 mt-2">
               <li><b>Servicio:</b> {service?.name}</li>
