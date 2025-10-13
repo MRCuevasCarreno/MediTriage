@@ -59,8 +59,8 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 // ==== CORS (frontend Vite) ====
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("frontend", p => p
-        .WithOrigins("http://localhost:5173")
+    options.AddPolicy("AllowAll", p => p
+        .AllowAnyOrigin()
         .AllowAnyHeader()
         .AllowAnyMethod());
 });
@@ -128,7 +128,7 @@ if (app.Environment.IsDevelopment())
 
 // ==== HTTP / CORS ====
 app.UseHttpsRedirection();
-app.UseCors("frontend");
+app.UseCors("AllowAll");
 
 // ==== Excepciones globales ====
 app.UseGlobalExceptionHandling();
