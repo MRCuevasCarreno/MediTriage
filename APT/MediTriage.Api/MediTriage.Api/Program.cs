@@ -164,4 +164,5 @@ using (var scope = app.Services.CreateScope())
     await DbSeeder.SeedAsync(db, doctors: 18, patients: 80, maxAppointmentsPerPatient: 3, force: false);
 }
 
+var hfToken = builder.Configuration["HuggingFace:Token"];
 app.Run();

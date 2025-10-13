@@ -34,3 +34,6 @@ build/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Configuración de entorno local
+**/appsettings.Development.json
