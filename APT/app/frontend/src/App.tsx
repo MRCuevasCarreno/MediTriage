@@ -972,10 +972,10 @@ function makeClientBookingId() {
             <form onSubmit={continuarPaso1} className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Documento de identificación</label>
-              {/*<select value={docType} onChange={(e)=>setDocType(e.target.value as any)} className="mt-1 w-full rounded-xl border px-3 py-2">
+                <select value={docType} onChange={(e)=>setDocType(e.target.value as any)} className="mt-1 w-full rounded-xl border px-3 py-2">
                   <option value="RUT">RUT (Chile)</option>
                   <option value="PASAPORTE">Pasaporte / Extranjería</option>
-                </select>*/} 
+                </select>
               </div>
 
               {docType === "RUT" && (
@@ -984,15 +984,24 @@ function makeClientBookingId() {
                   <input
                     value={rut}
                     onChange={(e)=>setRut(formatRut(e.target.value))}
+                    onBlur={()=>{
+                      if (!validateRut(rut)) setError("RUT Inválido");
+                      else setError(null);
+                    }}
                     placeholder="12.345.678-9"
                     className={`mt-1 w-full rounded-xl border px-3 py-2 ${error ? "border-red-400" : ""}`}
                   />
-                  {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
+                  {error && (
+                    <div className="mt-2 rounded-xl bg-red-50 border border-red-300 px-4 py-2 text-red-700 flex items-center gap-2 animate-fade-in">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <span className="font-semibold">RUT Inválido</span>
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="flex justify-end">
-                <button className="rounded-xl px-4 py-2 border" disabled={docType==="RUT" && !validateRut(rut)}>Continuar</button>
+                <button className="rounded-xl px-4 py-2 border" disabled={docType==="RUT" && (!validateRut(rut) || !!error)}>Continuar</button>
               </div>
             </form>
           </Card>
