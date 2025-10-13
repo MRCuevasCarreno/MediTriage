@@ -1,5 +1,10 @@
 import { useState } from "react";
-import Paso1Identificacion, { FoundPatient } from "./steps/Paso1Identificacion";
+import Paso1Identificacion from "./steps/Paso1Indentificacion";
+import Paso2Servicios from "./steps/Paso2Servicios";
+import Paso3CentroProfesional from "./steps/Paso3CentroProfesional";
+import Paso4DiayHora from "./steps/Paso4DiayHora";
+import Paso5Confirmacion from "./steps/Paso5Confirmacion";
+import type { FoundPatient } from "./steps/Paso1Indentificacion";
 
 type BookingState = {
   docType?: "RUT" | "PASAPORTE";
@@ -19,7 +24,12 @@ export default function WizardAgendarInvitado() {
   const [data, setData] = useState<BookingState>({});
 
   function next(partial: Partial<BookingState> = {}) {
-    setData(prev => ({ ...prev, ...partial }));
+    setData(prev => {
+      const newData = { ...prev, ...partial };
+      // Exponer el estado global para los steps (simulación)
+      (window as any).wizardData = newData;
+      return newData;
+    });
     setStep(s => Math.min(s + 1, steps.length - 1));
   }
   function back() { setStep(s => Math.max(s - 1, 0)); }
@@ -41,16 +51,20 @@ export default function WizardAgendarInvitado() {
         ))}
       </ol>
 
-      {/* Contenido del paso */}
       {step === 0 && (
         <Paso1Identificacion onNext={({ rut, patient, docType }) => next({ rut, patient, docType })} />
       )}
-
-      {step > 0 && (
-        <div className="mt-4 flex items-center justify-between max-w-2xl mx-auto">
-          <button onClick={back} className="text-sm underline">&lt; Volver</button>
-          <span className="text-xs text-gray-500">Paso {step+1} de {steps.length}</span>
-        </div>
+      {step === 1 && (
+        <Paso2Servicios onNext={({ servicioId }) => next({ servicioId })} onBack={back} />
+      )}
+      {step === 2 && (
+        <Paso3CentroProfesional onNext={({ centroId, profesionalId }) => next({ centroId, profesionalId })} onBack={back} />
+      )}
+      {step === 3 && (
+        <Paso4DiayHora onNext={({ fechaHora }) => next({ fechaHora })} onBack={back} />
+      )}
+      {step === 4 && (
+        <Paso5Confirmacion data={data} onBack={back} />
       )}
     </main>
   );

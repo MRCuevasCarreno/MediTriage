@@ -8,7 +8,7 @@ export default function NavBar() {
     <nav style={{ display:'flex', gap:12, alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #e5e7eb' }}>
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <strong>MediTriage</strong>
-        <Link to="/app">Inicio</Link>
+          <Link to="/">Inicio</Link>
         <Link to="/app/doctors">Doctores</Link>
         <Link to="/app/patients">Pacientes</Link>
         <Link to="/app/appointments">Citas</Link>

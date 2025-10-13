@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../../../services/api";
-import { validateRut, formatRut, cleanRut } from "../../../utils/rut";
+import { validateRut, formatRut, cleanRut } from "../../../Utils/rut";
 
 export type FoundPatient = { id: string; nombres: string; apellidos: string; rut: string } | null;
 
@@ -19,13 +19,7 @@ export default function Paso1Identificacion(
 
     if (docType === "RUT") {
       if (!validateRut(rut)) { setError("RUT inválido"); return; }
-      try {
-        setLoading(true);
-        const { data } = await api.get("/patients", { params: { rut: cleanRut(rut) } });
-        setPatient(data?.[0] ?? null); // si no existe, sigue como invitado
-      } catch { /* si falla la API igual seguimos */ }
-      finally { setLoading(false); }
-      onNext({ rut: cleanRut(rut), patient, docType });
+      onNext({ rut: cleanRut(rut), patient: null, docType });
     } else {
       onNext({ rut: "", patient: null, docType });
     }
@@ -71,7 +65,7 @@ export default function Paso1Identificacion(
       <div className="flex gap-3">
         <button
           type="submit"
-          disabled={loading || (docType === "RUT" && !validateRut(rut))}
+          disabled={loading || (docType === "RUT" && rut.trim() === "")}
           className="rounded-2xl bg-black text-white px-5 py-2 disabled:opacity-50"
         >
           {loading ? "Buscando…" : "Continuar"}
