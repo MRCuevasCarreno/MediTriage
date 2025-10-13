@@ -379,9 +379,28 @@ function Triage(){
   const [result, setResult] = useState<any>(null);
   async function run(){
     try{
-      // const r = await api.triage(answers);
-      const r = { level: "No urgente", specialty: "Medicina General", redFlags: [] };
-      setResult(r);
+      // Invocar API real de triage
+      const res = await fetch("https://localhost:7290/api/ai/triage", {
+        method: "POST",
+        headers: {
+          "accept": "text/plain",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          age: Number(answers.age),
+          fever: answers.fever,
+          pain: Number(answers.painLevel),
+          notes: answers.notes
+        })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const api = await res.json();
+      // Mapear respuesta a formato esperado
+      setResult({
+        level: api.data.level || "—",
+        specialty: api.data.specialist || "—",
+        redFlags: api.data.redFlag ? ["Sí"] : []
+      });
     }catch(err:any){ alert(err.message); }
   }
   return (
