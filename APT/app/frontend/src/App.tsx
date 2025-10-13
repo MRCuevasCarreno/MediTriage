@@ -953,10 +953,10 @@ function makeClientBookingId() {
             <form onSubmit={continuarPaso1} className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Documento de identificación</label>
-                <select value={docType} onChange={(e)=>setDocType(e.target.value as any)} className="mt-1 w-full rounded-xl border px-3 py-2">
+              {/*<select value={docType} onChange={(e)=>setDocType(e.target.value as any)} className="mt-1 w-full rounded-xl border px-3 py-2">
                   <option value="RUT">RUT (Chile)</option>
                   <option value="PASAPORTE">Pasaporte / Extranjería</option>
-                </select>
+                </select>*/} 
               </div>
 
               {docType === "RUT" && (
