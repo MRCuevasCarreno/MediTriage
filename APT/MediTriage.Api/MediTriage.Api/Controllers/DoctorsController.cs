@@ -90,6 +90,69 @@ public class DoctorsController : ControllerBase
             : Success(d, "Doctor encontrado.");
     }
 
+    [HttpPost("calendar")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> GetCalendar([FromBody] DoctorCalendarRequest request)
+    {
+        var doctor = await _db.Doctors
+            .Include(d => d.User)
+            .FirstOrDefaultAsync(d => d.Id == request.Id);
+
+        if (doctor == null)
+            return NotFound(new { data = (object?)null, message = "Doctor no encontrado." });
+
+        var date = request.Date.Date;
+        var startHour = new DateTime(date.Year, date.Month, date.Day, 9, 0, 0, DateTimeKind.Utc);
+        var endHour = new DateTime(date.Year, date.Month, date.Day, 20, 0, 0, DateTimeKind.Utc);
+
+        var slots = new List<AppointmentSlotDto>();
+        var notAvailable = new List<AppointmentNotAvailableDto>();
+
+        // Obtener citas agendadas para ese doctor en ese día
+        var appointments = await _db.Appointments
+            .Where(a => a.DoctorId == doctor.Id && a.Start.Date == date && a.Status == AppointmentStatus.Scheduled)
+            .ToListAsync();
+
+        for (var dt = startHour; dt < endHour; dt = dt.AddMinutes(30))
+        {
+            var slotStart = dt;
+            var slotEnd = dt.AddMinutes(29).AddSeconds(59);
+
+            bool isAvailable = !appointments.Any(a =>
+                a.Start < slotEnd && a.End > slotStart
+            );
+
+            slots.Add(new AppointmentSlotDto
+            {
+                StartHour = slotStart,
+                FinishHour = slotEnd,
+                Status = isAvailable
+            });
+
+            if (!isAvailable)
+            {
+                notAvailable.Add(new AppointmentNotAvailableDto
+                {
+                    Hour = slotStart,
+                    Status = false
+                });
+            }
+        }
+
+        var response = new DoctorCalendarResponse
+        {
+            Id = doctor.Id,
+            Name = doctor.User.Name,
+            Specialty = doctor.Specialty,
+            AppointmentsAvailable = slots.Where(s => s.Status).ToList(),
+            AppointmentsNotAvalable = notAvailable
+        };
+
+        return Ok(new { data = response, message = "Citas encontradas." });
+    }
+
     // Helpers locales
     private ObjectResult Error(int statusCode, string code, string message, object? data = null)
         => StatusCode(statusCode, new ErrorResponse(code, message, data));
