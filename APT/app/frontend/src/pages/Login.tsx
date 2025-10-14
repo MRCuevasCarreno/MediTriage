@@ -1,5 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../auth/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -8,6 +10,8 @@ export default function Login() {
   const [emailError, setEmailError] = useState<string|null>(null);
   const [passwordError, setPasswordError] = useState<string|null>(null);
   const [loading, setLoading] = useState(false);
+  const { loginWithCredentials, user } = useAuth();
+  const navigate = useNavigate();
 
   function validateEmail(email: string) {
     // Simple regex for email validation
@@ -33,40 +37,26 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await fetch("https://localhost:7290/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
-      if (!res.ok) {
-        setError("Credenciales inválidas");
-        setLoading(false);
-        return;
-      }
-      const body = await res.json();
-      // Guardar en localStorage
-      localStorage.setItem("token", body.token);
-      localStorage.setItem("expiresAtUtc", body.expiresAtUtc);
-      localStorage.setItem("email", body.email);
-      localStorage.setItem("fullName", body.fullName);
-      localStorage.setItem("role", body.role);
+      await loginWithCredentials(email, password);
       setLoading(false);
-      // Redirigir según rol
-      if (body.role === "Patient") {
-        window.location.href = "/";
-      } else if (body.role === "Doctor") {
-        window.location.href = "/home/Doctor";
-      } else if (body.role === "Admin") {
-        window.location.href = "/home/admin";
-      }
-    } catch {
-      setError("Error de red o servidor");
+    } catch (err: any) {
+      console.error('Error en login:', err);
+      setError("Credenciales inválidas o error de red");
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!loading && user?.role) {
+      if (user.role === "Patient") {
+        navigate("/", { replace: true });
+      } else if (user.role === "Doctor") {
+        navigate("/home/Doctor", { replace: true });
+      } else if (user.role === "Admin") {
+        navigate("/home/admin", { replace: true });
+      }
+    }
+  }, [user, loading, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
