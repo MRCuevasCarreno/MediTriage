@@ -1,4 +1,3 @@
-import NavBar from '../../../components/NavBar';
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { formatRut } from "../../../Utils/rut";
@@ -55,7 +54,6 @@ export default function Paso5Confirmacion({ data, onBack }: { data: any, onBack:
 
         return ( 
         <>
-            <NavBar />
             <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
                 <h2 className="text-xl font-semibold mb-4">Confirmación de reserva</h2>
                 <div className="mb-6">

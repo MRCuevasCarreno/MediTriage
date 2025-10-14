@@ -1,4 +1,3 @@
-import NavBar from '../../../components/NavBar';
 import React, { useEffect, useState } from "react";
 
 export default function Paso3CentroProfesional({ onNext, onBack }: { onNext: (data: { centroId: string, profesionalId: string }) => void, onBack: () => void }) {
@@ -90,7 +89,6 @@ export default function Paso3CentroProfesional({ onNext, onBack }: { onNext: (da
 
   return (
     <>
-      <NavBar />
     <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
       <h2 className="text-xl font-semibold mb-4">Selecciona centro y profesional</h2>
       <input

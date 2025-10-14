@@ -8,13 +8,19 @@ export default function NavBar() {
     <nav style={{ display:'flex', gap:12, alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #e5e7eb' }}>
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <strong>MediTriage</strong>
-          <Link to="/">Inicio</Link>
+        <Link to="/">Inicio</Link>
       </div>
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         {user?.fullName && <span>👋 {user.fullName}</span>}
-        <button onClick={()=>{ logout(); nav('/login', { replace:true }) }}>
-          Salir
-        </button>
+        {user ? (
+          <button onClick={()=>{ logout(); nav('/login', { replace:true }) }}>
+            Salir
+          </button>
+        ) : (
+          <button onClick={()=> nav('/login', { replace:true })}>
+            Iniciar Sesión
+          </button>
+        )}
       </div>
     </nav>
   )

@@ -1,7 +1,8 @@
+import AdminHome from "./pages/AdminHome";
 // Limpieza y estructura: solo router y helpers
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import MainLayout from "./layouts/MainLayout";
+import MainLayout2 from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import ConfirmacionCita from "./pages/ConfirmacionCita";
 import Login from "./pages/Login";
@@ -13,12 +14,14 @@ import Doctor from "./pages/Doctor";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import AgendarInvitado from "./pages/AgendarInvitado";
+import DoctorHome from "./pages/DoctorHome";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<MainLayout />}>
+        {/* Rutas con layout general */}
+        <Route element={<MainLayout2 />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -31,7 +34,9 @@ export default function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Route>
-
+        {/* Rutas con layout personalizado (sin MainLayout2) */}
+        <Route path="/home/Doctor" element={<DoctorHome />} />
+        <Route path="/home/admin" element={<AdminHome />} />
       </Routes>
     </BrowserRouter>
   );

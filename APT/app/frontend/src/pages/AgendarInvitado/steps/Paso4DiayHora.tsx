@@ -1,6 +1,4 @@
-import NavBar from '../../../components/NavBar';
 import React, { useEffect, useState } from "react";
-
 export default function Paso4DiayHora({
   onNext,
   onBack,
@@ -81,7 +79,6 @@ export default function Paso4DiayHora({
 
   return (
     <>
-      <NavBar />
       <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
         <h2 className="text-xl font-semibold mb-4">Selecciona día y hora</h2>
 
