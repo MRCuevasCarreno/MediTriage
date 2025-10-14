@@ -26,7 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!token) { setUser(null); return }
       try {
         const me = await get<any>('/me')
-        if (!canceled) setUser(me)
+        // Mapear 'name' a 'fullName' para compatibilidad con NavBar
+        const userData = {
+          email: me.email,
+          fullName: me.name,
+          role: me.role
+        }
+        if (!canceled) setUser(userData)
       } catch {
         // token inválido
         if (!canceled) {
