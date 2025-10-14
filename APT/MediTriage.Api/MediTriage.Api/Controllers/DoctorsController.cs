@@ -120,12 +120,15 @@ public class DoctorsController : ControllerBase
             var slotStart = dt;
             var slotEnd = dt.AddMinutes(29).AddSeconds(59);
 
-            bool isAvailable = !appointments.Any(a =>
+            var appointment = appointments.FirstOrDefault(a =>
                 a.Start < slotEnd && a.End > slotStart
             );
 
+            bool isAvailable = appointment == null;
+
             slots.Add(new AppointmentSlotDto
             {
+                AppointmentID = appointment?.Id,
                 StartHour = slotStart,
                 FinishHour = slotEnd,
                 Status = isAvailable
@@ -135,6 +138,7 @@ public class DoctorsController : ControllerBase
             {
                 notAvailable.Add(new AppointmentNotAvailableDto
                 {
+                    AppointmentID = appointment?.Id, // <-- Asigna el ID aquí
                     Hour = slotStart,
                     Status = false
                 });

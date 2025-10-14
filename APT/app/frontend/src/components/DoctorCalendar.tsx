@@ -50,10 +50,11 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/plain',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ status: 2 })
       });
-      setAppointments(appts => appts.filter(a => a.id !== appointmentId));
+      setAppointments(appts => appts.filter(a => a.appointmentID !== appointmentId));
     } catch {
       alert('No se pudo cancelar la cita');
     }
@@ -76,14 +77,14 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
       {error ? <div className="text-red-600">{error}</div> : null}
       <ul className="divide-y">
         {appointments.length === 0 && !loading ? <li>No hay citas para esta fecha.</li> : null}
-        {appointments.map((appt, idx) => (
-          <li key={appt.hour || idx} className="py-2 flex justify-between items-center">
+        {[...new Map(appointments.map(a => [a.appointmentID, a])).values()].map((appt) => (
+          <li key={appt.appointmentID} className="py-2 flex justify-between items-center">
             <div>
               <strong>{new Date(appt.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
             </div>
             <button
               className="bg-red-500 text-white px-3 py-1 rounded"
-              onClick={() => cancelAppointment(appt.id || idx)}
+              onClick={() => cancelAppointment(appt.appointmentID)}
             >
               Cancelar
             </button>
