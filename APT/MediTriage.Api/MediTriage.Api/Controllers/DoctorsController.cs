@@ -32,7 +32,7 @@ public class DoctorsController : ControllerBase
         var dto = await _db.Doctors
             .Include(d => d.User)
             .Where(d => d.UserId == userId)
-            .Select(d => new DoctorListDto { Id = d.Id, Name = d.User.Name, Specialty = d.Specialty })
+            .Select(d => new DoctorListDto { Id = d.Id, UserId = d.UserId, Name = d.User.Name, Specialty = d.Specialty, Email = d.User.Email })
             .FirstOrDefaultAsync();
 
         return dto is null
@@ -66,7 +66,7 @@ public class DoctorsController : ControllerBase
         var data = await q
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(d => new DoctorListDto { Id = d.Id, Name = d.User.Name, Specialty = d.Specialty })
+            .Select(d => new DoctorListDto { Id = d.Id, UserId = d.UserId, Name = d.User.Name, Specialty = d.Specialty, Email = d.User.Email })
             .ToListAsync();
 
         return Ok(new SuccessResponse<PagedResponse<DoctorListDto>>(
@@ -82,7 +82,7 @@ public class DoctorsController : ControllerBase
     {
         var d = await _db.Doctors.Include(x => x.User)
             .Where(x => x.Id == id)
-            .Select(x => new DoctorListDto { Id = x.Id, Name = x.User.Name, Specialty = x.Specialty })
+            .Select(x => new DoctorListDto { Id = x.Id, Name = x.User.Name, Specialty = x.Specialty, Email = x.User.Email })
             .FirstOrDefaultAsync();
 
         return d is null

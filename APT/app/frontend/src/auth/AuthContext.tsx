@@ -3,7 +3,7 @@ import { api, setAuthToken, post, get } from '../lib/api'
 
 type AuthCtx = {
   token: string | null
-  user: { email?: string | null, fullName?: string | null, role?: string | null } | null
+  user: { id?: string | number, doctorId?: string | number, email?: string | null, fullName?: string | null, role?: string | null } | null
   loginWithCredentials: (email: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -28,6 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await get<any>('/me')
         // Mapear 'name' a 'fullName' para compatibilidad con NavBar
         const userData = {
+          id: me.id,
+          doctorId: me.doctorId,
           email: me.email,
           fullName: me.name,
           role: me.role
@@ -47,10 +49,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token])
 
   async function loginWithCredentials(email: string, password: string) {
-    const res = await post<{ token: string, email: string, fullName: string, role: string, expiresAtUtc: string }, any>('/auth/login', { email, password })
+    const res = await post<any, any>('/auth/login', { email, password })
     localStorage.setItem('token', res.token)
     setToken(res.token)
-    setUser({ email: res.email, fullName: res.fullName, role: res.role })
+    setUser({
+      id: res.id,
+      doctorId: res.doctorId,
+      email: res.email,
+      fullName: res.fullName,
+      role: res.role
+    })
   }
 
   function logout() {

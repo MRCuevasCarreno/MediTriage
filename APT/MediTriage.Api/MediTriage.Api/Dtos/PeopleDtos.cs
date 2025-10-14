@@ -9,6 +9,8 @@ public class PatientListDto
 public class DoctorListDto
 {
     public int Id { get; set; }
+    public int UserId { get; set; } // <-- Nuevo campo
     public string Name { get; set; } = null!;
     public string Specialty { get; set; } = null!;
+    public string Email { get; set; } = null!;
 }
