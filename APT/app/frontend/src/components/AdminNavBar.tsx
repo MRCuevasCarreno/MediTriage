@@ -15,7 +15,8 @@ export default function AdminNavBar() {
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <strong>MediTriage Admin</strong>
   <Link to="/home/admin">Dashboard</Link>
-  <Link to="/admin/doctors">Administrar Doctores</Link>
+  <Link to="/admin/doctors">Doctores</Link>
+  <Link to="/admin/sucursal">Sucursales</Link>
       </div>
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         {user?.fullName && <span>👋 {user.fullName}</span>}
