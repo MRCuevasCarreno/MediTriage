@@ -1,13 +1,17 @@
 import AdminHome from "./pages/AdminHome";
 import AdminDoctorsPage from "./pages/AdminDoctorsPage";
+import AddDoctorPage from "./pages/AddDoctorPage";
+import ListDoctorPage from "./pages/ListDoctorPage";
+import DeleteDoctorPage from "./pages/DeleteDoctorPage";
+import AssignDoctorPage from "./pages/AssignDoctorPage";
 import { useAuth } from "./auth/AuthContext";
 
-export function AdminDoctorsPageGuard() {
+function AdminOnlyGuard({ children }) {
   const { user } = useAuth();
   if (user?.role !== "Admin") {
     return <div className="p-8 text-center text-red-600">Acceso denegado. Solo administradores pueden ver esta página.</div>;
   }
-  return <AdminDoctorsPage />;
+  return children;
 }
 // Limpieza y estructura: solo router y helpers
 import React from "react";
@@ -42,12 +46,17 @@ export default function App() {
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/doctor" element={<Doctor />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/doctors" element={<AdminDoctorsPageGuard />} />
+          <Route path="/admin/doctors" element={<AdminOnlyGuard><AdminDoctorsPage /></AdminOnlyGuard>} />
           <Route path="*" element={<NotFound />} />
         </Route>
-        {/* Rutas con layout personalizado (sin MainLayout2) */}
-        <Route path="/home/Doctor" element={<DoctorHome />} />
-        <Route path="/home/admin" element={<AdminHome />} />
+  {/* Rutas con layout personalizado (sin MainLayout2) */}
+  <Route path="/home/Doctor" element={<DoctorHome />} />
+  <Route path="/home/admin" element={<AdminHome />} />
+  {/* Rutas de gestión de doctores solo con NavBar administrativo */}
+  <Route path="/admin/add/doctor" element={<AdminOnlyGuard><AddDoctorPage /></AdminOnlyGuard>} />
+  <Route path="/admin/list/doctor" element={<AdminOnlyGuard><ListDoctorPage /></AdminOnlyGuard>} />
+  <Route path="/admin/delete/doctor" element={<AdminOnlyGuard><DeleteDoctorPage /></AdminOnlyGuard>} />
+  <Route path="/admin/assign/doctor" element={<AdminOnlyGuard><AssignDoctorPage /></AdminOnlyGuard>} />
       </Routes>
     </BrowserRouter>
   );
