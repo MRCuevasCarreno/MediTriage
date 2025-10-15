@@ -1,4 +1,14 @@
 import AdminHome from "./pages/AdminHome";
+import AdminDoctorsPage from "./pages/AdminDoctorsPage";
+import { useAuth } from "./auth/AuthContext";
+
+export function AdminDoctorsPageGuard() {
+  const { user } = useAuth();
+  if (user?.role !== "Admin") {
+    return <div className="p-8 text-center text-red-600">Acceso denegado. Solo administradores pueden ver esta página.</div>;
+  }
+  return <AdminDoctorsPage />;
+}
 // Limpieza y estructura: solo router y helpers
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -32,6 +42,7 @@ export default function App() {
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/doctor" element={<Doctor />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/doctors" element={<AdminDoctorsPageGuard />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         {/* Rutas con layout personalizado (sin MainLayout2) */}

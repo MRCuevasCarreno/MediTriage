@@ -1,10 +1,12 @@
 import NavBar from "../components/NavBar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 export default function MainLayout2() {
+  const location = useLocation();
+  const hideNavBar = location.pathname === "/admin/doctors";
   return (
     <>
-      <NavBar />
+      {!hideNavBar && <NavBar />}
       <main>
         <Outlet />
       </main>
