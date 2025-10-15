@@ -44,11 +44,17 @@ public class DoctorsController : ControllerBase
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Get([FromQuery] PaginationQuery query) // <-- agregado
+    public async Task<ActionResult> Get([FromQuery] PaginationQuery query, [FromQuery] string? name)
     {
         var q = _db.Doctors
             .Include(d => d.User)
             .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            var nameLower = name.Trim().ToLower();
+            q = q.Where(d => d.User.Name.ToLower().Contains(nameLower));
+        }
 
         var sortBy = (query.SortBy ?? "name").ToLowerInvariant();
         var desc = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
