@@ -48,6 +48,7 @@ public class DoctorsController : ControllerBase
     {
         var q = _db.Doctors
             .Include(d => d.User)
+            .Include(d => d.Sucursales) // <-- Incluye sucursales
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(name))
@@ -72,7 +73,21 @@ public class DoctorsController : ControllerBase
         var data = await q
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(d => new DoctorListDto { Id = d.Id, UserId = d.UserId, Name = d.User.Name, Specialty = d.Specialty, Email = d.User.Email })
+            .Select(d => new DoctorListDto
+            {
+                Id = d.Id,
+                UserId = d.UserId,
+                Name = d.User.Name,
+                Specialty = d.Specialty,
+                Email = d.User.Email,
+                Sucursal = d.Sucursales.Select(s => new SucursalSimpleDto
+                {
+                    Id = s.Id,
+                    Name = s.Nombre,
+                    Address = s.Direccion, // <-- Corrección aquí
+                    Location = s.Comuna
+                }).ToList()
+            })
             .ToListAsync();
 
         return Ok(new SuccessResponse<PagedResponse<DoctorListDto>>(

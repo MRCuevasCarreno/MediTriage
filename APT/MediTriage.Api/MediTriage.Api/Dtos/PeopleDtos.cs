@@ -13,4 +13,5 @@ public class DoctorListDto
     public string Name { get; set; } = null!;
     public string Specialty { get; set; } = null!;
     public string Email { get; set; } = null!;
+    public List<SucursalSimpleDto> Sucursal { get; set; } = new(); // <-- Nuevo campo
 }
