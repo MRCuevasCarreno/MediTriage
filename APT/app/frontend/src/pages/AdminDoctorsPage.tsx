@@ -8,9 +8,8 @@ export default function AdminDoctorsPage() {
       <div className="max-w-2xl mx-auto p-6 mt-8">
         <h1 className="text-2xl font-bold mb-4">Administrar Doctores</h1>
         <div className="flex flex-col gap-4 mb-4">
-          <Link to="/admin/add/doctor" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center">Agregar Doctor</Link>
-          <Link to="/admin/list/doctor" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-center">Listar Doctores</Link>
-          <Link to="/admin/delete/doctor" className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-center">Eliminar Doctor</Link>
+          <Link to="/admin/add/doctor" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center">Nuevo Doctor</Link>
+          <Link to="/admin/list/doctor" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-center">Administrar Doctores</Link>
           <Link to="/admin/assign/doctor" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center">Asignar Doctor a Sucursal</Link>
         </div>
         <p className="mb-4">Selecciona una acción para gestionar doctores.</p>

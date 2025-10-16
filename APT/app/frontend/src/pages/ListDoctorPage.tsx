@@ -8,6 +8,12 @@ interface Doctor {
   name: string;
   specialty: string;
   email: string;
+  sucursal?: {
+    id: number;
+    name: string;
+    address: string;
+    location: string;
+  }[];
 }
 
 export default function ListDoctorPage() {
@@ -21,6 +27,7 @@ export default function ListDoctorPage() {
   const [sortField, setSortField] = useState<'name'|'specialty'|'email'>('name');
   const [totalPages, setTotalPages] = useState(1);
   const [searchName, setSearchName] = useState('');
+  const [deleteMessage, setDeleteMessage] = useState('');
 
   useEffect(() => {
     async function fetchDoctors() {
@@ -95,6 +102,7 @@ export default function ListDoctorPage() {
             </select>
           </div>
         </div>
+  {deleteMessage && <div className="mb-4 text-green-600">{deleteMessage}</div>}
         {loading ? (
           <p>Cargando doctores...</p>
         ) : error ? (
@@ -102,10 +110,64 @@ export default function ListDoctorPage() {
         ) : (
           <div className="space-y-4">
             {doctors.map(doc => (
-              <div key={doc.id} className="border rounded p-4 shadow">
-                <div className="font-semibold text-lg mb-1">{doc.name}</div>
-                <div className="mb-1">Especialidad: {doc.specialty}</div>
-                <div className="mb-1">Email: {doc.email}</div>
+              <div key={doc.id} className="border rounded p-4 shadow flex justify-between items-start">
+                <div>
+                  <div className="font-semibold text-lg mb-1">{doc.name}</div>
+                  <div className="mb-1">Especialidad: {doc.specialty}</div>
+                  <div className="mb-1">Email: {doc.email}</div>
+                  <div className="mt-2">
+                    <div className="font-medium">Sucursales que atiende:</div>
+                    {doc.sucursal && doc.sucursal.length > 0 ? (
+                      <div className="mt-1 space-y-1">
+                        {doc.sucursal.map(s => (
+                          <div key={s.id} className="text-sm border rounded p-2 bg-gray-50">
+                            <div><strong>{s.name}</strong></div>
+                            <div className="text-gray-700">Dirección: {s.address}</div>
+                            <div className="text-gray-700">Comuna: {s.location}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600">No asignada</div>
+                    )}
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <button
+                    onClick={async () => {
+                      // llamada DELETE
+                      if (!token) {
+                        setDeleteMessage('Token no disponible.');
+                        return;
+                      }
+                      try {
+                        const payload = { id: doc.userId, userId: doc.id };
+                        const res = await fetch('https://localhost:7290/api/Doctors', {
+                          method: 'DELETE',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'text/plain',
+                            'Authorization': `Bearer ${token}`,
+                          },
+                          body: JSON.stringify(payload),
+                        });
+                        if (!res.ok) {
+                          const txt = await res.text().catch(() => '');
+                          setDeleteMessage(`Error al eliminar: ${txt || res.status}`);
+                          return;
+                        }
+                        // Mostrar mensaje y eliminar localmente
+                        setDeleteMessage(`Doctor eliminado: ${doc.name}`);
+                        setDoctors(prev => prev.filter(d => d.id !== doc.id));
+                      } catch (err) {
+                        setDeleteMessage('Error de red al eliminar doctor');
+                      }
+                    }}
+                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
