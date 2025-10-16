@@ -163,6 +163,99 @@ public class DoctorsController : ControllerBase
         return Ok(new { data = response, message = "Citas encontradas." });
     }
 
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> CreateDoctor([FromBody] DoctorCreateDto dto)
+    {
+        // Validación básica
+        if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Specialty) || string.IsNullOrWhiteSpace(dto.Email))
+            return Error(StatusCodes.Status400BadRequest, "InvalidInput", "Todos los campos son obligatorios.");
+
+        // Validar especialidad
+        var allowedSpecialties = new[] { "Medicina General", "Dermatología", "Cardiología", "Pediatría", "Kinesiología" };
+        if (!allowedSpecialties.Contains(dto.Specialty))
+            return Error(StatusCodes.Status400BadRequest, "InvalidSpecialty", "Especialidad no permitida.");
+
+        // Validar email único
+        var email = dto.Email.Trim().ToLowerInvariant();
+        if (await _db.Users.AnyAsync(u => u.Email == email))
+            return Error(StatusCodes.Status400BadRequest, "EmailExists", "El email ya está registrado.");
+
+        // Crear usuario
+        var user = new User
+        {
+            Name = dto.Name.Trim(),
+            Email = email,
+            Role = UserRole.Doctor,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N")) // Password aleatoria
+        };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        // Crear doctor
+        var doctor = new Doctor
+        {
+            UserId = user.Id,
+            Specialty = dto.Specialty
+        };
+        _db.Doctors.Add(doctor);
+        await _db.SaveChangesAsync();
+
+        // Respuesta
+        var result = new
+        {
+            id = user.Id,
+            userId = doctor.Id,
+            name = user.Name,
+            specialty = doctor.Specialty,
+            email = user.Email
+        };
+
+        return StatusCode(StatusCodes.Status201Created,
+            new SuccessResponse<object>(new[] { result }, "Doctor creado exitosamente."));
+    }
+
+    public class DoctorDeleteDto
+    {
+        public int Id { get; set; }      // id usuario
+        public int UserId { get; set; }  // id doctor
+    }
+
+    [HttpDelete]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> DeleteDoctor([FromBody] DoctorDeleteDto dto)
+    {
+        // Buscar doctor y usuario asociados
+        var doctor = await _db.Doctors
+            .Include(d => d.User)
+            .FirstOrDefaultAsync(d => d.Id == dto.UserId && d.UserId == dto.Id);
+
+        if (doctor == null)
+            return Error(StatusCodes.Status404NotFound, "NotFound", "Doctor no encontrado.");
+
+        // Guardar datos para la respuesta antes de eliminar
+        var result = new
+        {
+            id = doctor.User.Id,
+            userId = doctor.Id,
+            name = doctor.User.Name,
+            specialty = doctor.Specialty,
+            email = doctor.User.Email
+        };
+
+        // Eliminar doctor y usuario
+        _db.Doctors.Remove(doctor);
+        _db.Users.Remove(doctor.User);
+        await _db.SaveChangesAsync();
+
+        return Ok(new SuccessResponse<object>(new[] { result }, "Doctor Eliminado exitosamente."));
+    }
+
     // Helpers locales
     private ObjectResult Error(int statusCode, string code, string message, object? data = null)
         => StatusCode(statusCode, new ErrorResponse(code, message, data));
