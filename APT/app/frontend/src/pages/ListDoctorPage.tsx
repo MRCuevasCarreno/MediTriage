@@ -16,6 +16,16 @@ interface Doctor {
   }[];
 }
 
+interface Sucursal {
+  id: number;
+  nombre?: string;
+  name?: string;
+  direccion?: string;
+  address?: string;
+  comuna?: string;
+  location?: string;
+}
+
 export default function ListDoctorPage() {
   const { token } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -28,6 +38,12 @@ export default function ListDoctorPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [searchName, setSearchName] = useState('');
   const [deleteMessage, setDeleteMessage] = useState('');
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [sucursalesLoading, setSucursalesLoading] = useState(false);
+  const [assignOpen, setAssignOpen] = useState<Record<number, boolean>>({});
+  const [selectedSucursal, setSelectedSucursal] = useState<Record<number, number | null>>({});
+  const [assignLoading, setAssignLoading] = useState<Record<number, boolean>>({});
+  const [assignMessage, setAssignMessage] = useState<Record<number, string>>({});
 
   useEffect(() => {
     async function fetchDoctors() {
@@ -61,6 +77,29 @@ export default function ListDoctorPage() {
     }
     fetchDoctors();
   }, [pageNumber, pageSize, sortBy, sortField, searchName, token]);
+
+  // Fetch sucursales once
+  useEffect(() => {
+    async function fetchSucursales() {
+      setSucursalesLoading(true);
+      try {
+        const res = await fetch('https://localhost:7290/api/Sucursales', {
+          headers: {
+            'Accept': 'text/plain',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const json = await res.json();
+        // API returns { data: [ { id, nombre, direccion, comuna, ... } ], message }
+        setSucursales(json.data || []);
+      } catch (err) {
+        // ignore silently; sucursales can remain empty
+      } finally {
+        setSucursalesLoading(false);
+      }
+    }
+    if (token) fetchSucursales();
+  }, [token]);
 
   return (
     <>
@@ -132,7 +171,7 @@ export default function ListDoctorPage() {
                     )}
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex flex-col items-end gap-2">
                   <button
                     onClick={async () => {
                       // llamada DELETE
@@ -167,6 +206,99 @@ export default function ListDoctorPage() {
                   >
                     Eliminar
                   </button>
+
+                  <div className="w-56">
+                    <button
+                      onClick={() => setAssignOpen(p => ({ ...p, [doc.id]: !p[doc.id] }))}
+                      className="mt-2 w-full bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    >
+                      Asignar nueva Sucursal
+                    </button>
+
+                    {assignOpen[doc.id] && (
+                      <div className="mt-2 bg-white border rounded p-2">
+                        {sucursalesLoading ? (
+                          <div className="text-sm">Cargando sucursales...</div>
+                        ) : (
+                          <>
+                            <select
+                              value={selectedSucursal[doc.id] ?? ''}
+                              onChange={e => setSelectedSucursal(s => ({ ...s, [doc.id]: Number(e.target.value) }))}
+                              className="w-full border rounded px-2 py-1 mb-2"
+                            >
+                              <option value="">-- Seleccionar sucursal --</option>
+                              {sucursales.map(s => (
+                                <option key={s.id} value={s.id}>{s.nombre || s.name}</option>
+                              ))}
+                            </select>
+
+                            <button
+                              onClick={async () => {
+                                const sucId = selectedSucursal[doc.id];
+                                if (!sucId) {
+                                  setAssignMessage(m => ({ ...m, [doc.id]: 'Selecciona una sucursal' }));
+                                  return;
+                                }
+                                if (!token) {
+                                  setAssignMessage(m => ({ ...m, [doc.id]: 'Token no disponible.' }));
+                                  return;
+                                }
+                                setAssignLoading(l => ({ ...l, [doc.id]: true }));
+                                try {
+                                  const body = { idDoctor: doc.id, idSucursal: sucId };
+                                  const res = await fetch('https://localhost:7290/api/Sucursales/assignDoctor', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Accept': 'text/plain',
+                                      'Authorization': `Bearer ${token}`,
+                                    },
+                                    body: JSON.stringify(body),
+                                  });
+                                  if (!res.ok) {
+                                    const txt = await res.text().catch(() => '');
+                                    setAssignMessage(m => ({ ...m, [doc.id]: `Error al asignar: ${txt || res.status}` }));
+                                    return;
+                                  }
+                                  const json = await res.json().catch(() => null);
+                                  // Expected: { data: [ { idDoctor, idSucursal, nombre, direccion, comuna } ], message }
+                                  const assigned = json?.data && Array.isArray(json.data) && json.data[0] ? json.data[0] : null;
+                                  if (!assigned || !('idDoctor' in assigned) || !('idSucursal' in assigned)) {
+                                    alert('Error al asignar el doctor a la sucursal.');
+                                    return;
+                                  }
+                                  // Append assigned sucursal data to doctor.sucursal
+                                  setDoctors(prev => prev.map(d => d.id === doc.id ? ({
+                                    ...d,
+                                    sucursal: [
+                                      ...(d.sucursal || []),
+                                      {
+                                        id: assigned.idSucursal,
+                                        name: assigned.nombre || assigned.name || '',
+                                        address: assigned.direccion || assigned.address || '',
+                                        location: assigned.comuna || assigned.location || '',
+                                      }
+                                    ]
+                                  }) : d));
+                                  setAssignMessage(m => ({ ...m, [doc.id]: 'Sucursal asignada correctamente' }));
+                                  setAssignOpen(p => ({ ...p, [doc.id]: false }));
+                                } catch (err) {
+                                  setAssignMessage(m => ({ ...m, [doc.id]: 'Error de red al asignar sucursal' }));
+                                } finally {
+                                  setAssignLoading(l => ({ ...l, [doc.id]: false }));
+                                }
+                              }}
+                              className="w-full bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                            >
+                              {assignLoading[doc.id] ? 'Asignando...' : 'Asignar'}
+                            </button>
+
+                            {assignMessage[doc.id] && <div className="text-sm mt-2">{assignMessage[doc.id]}</div>}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
