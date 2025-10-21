@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Layout from "../components/Layout";
-import Card from "../components/Card";
+import Card from "../components/ui/Card";
 import Badge from "../components/Badge";
 
 export default function BookAppointment() {

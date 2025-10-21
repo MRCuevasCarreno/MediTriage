@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Layout from "../components/Layout";
-import Card from "../components/Card";
+import Card from "../components/ui/Card";
 
 export default function Triage() {
   const [answers, setAnswers] = useState({ age: "", fever: false, painLevel: 3, notes: "" });

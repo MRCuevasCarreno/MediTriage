@@ -1,19 +1,42 @@
 import React, { useState } from "react";
 import Layout from "../components/Layout";
-import Card from "../components/Card";
+import Card from "../components/ui/Card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { post } from "../lib/api";
 
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "patient" as "patient" | "doctor" | "admin" });
   const nav = useNavigate();
   const { loginWithCredentials } = useAuth();
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    // Aquí deberías llamar a tu API de registro y luego loguear al usuario
+
+  
+async function onSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  try {
+    await post("/auth/register", {
+      email: form.email,
+      password: form.password,
+      fullName: form.name,
+      role: form.role
+    });
+
     await loginWithCredentials(form.email, form.password);
     nav("/");
+  } catch (err: any) {
+    const status = err?.response?.status;
+    const msg = err?.response?.data?.message || "No se pudo registrar.";
+
+    if (status === 409) {
+      alert("Este correo ya está registrado. Te llevo a Iniciar sesión.");
+      return nav("/login");
+    }
+    alert(msg);
+    console.error("Register error:", err);
   }
+}
+
+
   return (
     <Layout>
       <div className="max-w-lg mx-auto">

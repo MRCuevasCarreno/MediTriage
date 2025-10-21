@@ -43,8 +43,8 @@ function Navbar() {
             <NavLink to="/agendar-invitado" className={linkCls}>Agendar</NavLink>
             <NavLink to="/triage" className={linkCls}>Triage</NavLink>
             {user && <NavLink to="/appointments" className={linkCls}>Mis citas</NavLink>}
-            {user?.role === "Doctor" && <NavLink to="/doctor" className={linkCls}>Médico</NavLink>}
-            {user?.role === "Admin" && <NavLink to="/admin" className={linkCls}>Admin</NavLink>}
+            {user?.role === "doctor" && <NavLink to="/doctor" className={linkCls}>Médico</NavLink>}
+            {user?.role === "admin" && <NavLink to="/admin" className={linkCls}>Admin</NavLink>}
           </nav>
 
           {/* acciones (derecha) */}
@@ -88,8 +88,8 @@ function Navbar() {
             <NavLink to="/agendar-invitado" className={linkCls} onClick={() => setOpen(false)}>Agendar</NavLink>
             <NavLink to="/triage" className={linkCls} onClick={() => setOpen(false)}>Triage</NavLink>
             {user && <NavLink to="/appointments" className={linkCls} onClick={() => setOpen(false)}>Mis citas</NavLink>}
-            {user?.role === "Doctor" && <NavLink to="/doctor" className={linkCls} onClick={() => setOpen(false)}>Médico</NavLink>}
-            {user?.role === "Admin" && <NavLink to="/admin" className={linkCls} onClick={() => setOpen(false)}>Admin</NavLink>}
+            {user?.role === "doctor" && <NavLink to="/doctor" className={linkCls} onClick={() => setOpen(false)}>Médico</NavLink>}
+            {user?.role === "admin" && <NavLink to="/admin" className={linkCls} onClick={() => setOpen(false)}>Admin</NavLink>}
             {!user ? (
               <>
                 <NavLink to="/login" className={linkCls} onClick={() => setOpen(false)}>Entrar</NavLink>

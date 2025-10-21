@@ -1,109 +1,146 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import Layout from "../components/Layout";
+import Card from "../components/ui/Card";
 import { get } from "../lib/api";
-import type { Appointment } from "../types";
+import { useAuth } from "../auth/AuthContext";
 
-type Row = { id:number; name?:string; [k:string]: any };
+type Appointment = {
+  id?: number;
+  start?: string;
+  end?: string;
+  status?: string;
+  attended?: boolean;
+  noShow?: boolean;
+  triageLevel?: string | number;
+  patientId?: number | string;
+  doctorId?: number | string;
+};
 
-function usePager<T>(data: T[], pageSize=10){
-  const [page, setPage] = useState(1);
-  const maxPage = Math.max(1, Math.ceil(data.length / pageSize));
-  const view = useMemo(()=> data.slice((page-1)*pageSize, page*pageSize), [data, page, pageSize]);
-  return { page, setPage, maxPage, view };
-}
+type Row = { id: number; name?: string; fullName?: string; [k: string]: any };
 
-export default function AdminDashboard(){
-  const [tab, setTab] = useState<"patients"|"doctors"|"appointments">("appointments");
+const StatCard = ({ label, value }: { label: string; value: number | null }) => (
+  <div className="rounded-2xl border bg-white p-6 shadow-sm">
+    <p className="text-sm text-gray-600">{label}</p>
+    <p className="mt-2 text-4xl font-bold">{value ?? "—"}</p>
+  </div>
+);
+
+export default function AdminDashboard() {
+  const { logout } = useAuth();
+
   const [patients, setPatients] = useState<Row[]>([]);
   const [doctors, setDoctors] = useState<Row[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [q, setQ] = useState("");
+  const [statsApi, setStatsApi] = useState<{
+    patients?: number;
+    doctors?: number;
+    appointments?: number;
+    noShows?: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
-    get<Row[]>("/api/patients").then(r=>setPatients(r as any)).catch(()=>{});
-    get<Row[]>("/api/doctors").then(r=>setDoctors(r as any)).catch(()=>{});
-    get<Appointment[]>("/api/appointments").then(r=>setAppointments(r as any)).catch(()=>{});
-  },[]);
+  useEffect(() => {
+    let canceled = false;
 
-  const filterRows = (rows:Row[]) => rows.filter(r => JSON.stringify(r).toLowerCase().includes(q.toLowerCase()));
-  const filterApps = (rows:Appointment[]) => rows.filter(r => JSON.stringify(r).toLowerCase().includes(q.toLowerCase()));
+    async function load() {
+      // 1) Si existe: /api/admin/stats
+      try {
+        const s = await get<any>("/api/admin/stats");
+        if (!canceled && s) setStatsApi(s);
+      } catch {
+        /* ignorar si no existe */
+      }
 
-  const pPager = usePager(filterRows(patients));
-  const dPager = usePager(filterRows(doctors));
-  const aPager = usePager(filterApps(appointments));
+      // 2) Fallback: contar desde endpoints base
+      const [p, d, a] = await Promise.allSettled([
+        get<Row[]>("/api/patients"),
+        get<Row[]>("/api/doctors"),
+        get<Appointment[]>("/api/appointments"),
+      ]);
+
+      if (canceled) return;
+
+      if (p.status === "fulfilled" && Array.isArray(p.value)) setPatients(p.value);
+      if (d.status === "fulfilled" && Array.isArray(d.value)) setDoctors(d.value);
+      if (a.status === "fulfilled" && Array.isArray(a.value)) setAppointments(a.value);
+
+      setLoading(false);
+    }
+
+    load();
+    return () => { canceled = true; };
+  }, []);
+
+  const noShowsFromAppointments = useMemo(() => {
+    return appointments.filter((a: any) => {
+      if (a?.noShow === true) return true;
+      if (a?.attended === false) return true;
+      if (typeof a?.status === "string" && a.status.toLowerCase().includes("no")) return true; // "no-show", "no asistió"
+      return false;
+    }).length;
+  }, [appointments]);
+
+  const patientsCount     = statsApi?.patients     ?? (patients.length || null);
+  const doctorsCount      = statsApi?.doctors      ?? (doctors.length || null);
+  const appointmentsCount = statsApi?.appointments ?? (appointments.length || null);
+  const noShowsCount      = statsApi?.noShows      ?? (appointments.length ? noShowsFromAppointments : null);
 
   return (
-    <main className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Panel administrador</h1>
-      <div className="flex gap-2 mb-4">
-        <button className={"px-3 py-1 rounded " + (tab==="appointments"?"bg-blue-600 text-white":"border")} onClick={()=>setTab("appointments")}>Citas</button>
-        <button className={"px-3 py-1 rounded " + (tab==="patients"?"bg-blue-600 text-white":"border")} onClick={()=>setTab("patients")}>Pacientes</button>
-        <button className={"px-3 py-1 rounded " + (tab==="doctors"?"bg-blue-600 text-white":"border")} onClick={()=>setTab("doctors")}>Doctores</button>
-        <input className="ml-auto border rounded p-2" placeholder="Buscar..." value={q} onChange={e=>setQ(e.target.value)} />
+    <Layout>
+      {/* Header como en tu captura */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">MediTriage</h1>
+          <div className="text-sm text-gray-500">Inicio</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-2 rounded-full bg-yellow-50 px-3 py-1 text-yellow-800 border border-yellow-200 text-sm">
+            🛡️ Admin
+          </span>
+          <button onClick={logout} className="text-sm text-gray-700 hover:underline">
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
 
-      {tab==="patients" && (
-        <section>
-          <table className="w-full border rounded">
-            <thead><tr><th className="text-left p-2">ID</th><th className="text-left p-2">Nombre</th></tr></thead>
-            <tbody>
-              {pPager.view.map(p => (<tr key={p.id}><td className="p-2">{p.id}</td><td className="p-2">{p.name ?? p.fullName ?? "-"}</td></tr>))}
-            </tbody>
-          </table>
-          <Pager {...pPager} />
-        </section>
-      )}
+      {/* Métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Pacientes" value={loading ? null : patientsCount} />
+        <StatCard label="Médicos"   value={loading ? null : doctorsCount} />
+        <StatCard label="Citas"     value={loading ? null : appointmentsCount} />
+        <StatCard label="No-shows"  value={loading ? null : noShowsCount} />
+      </div>
 
-      {tab==="doctors" && (
-        <section>
-          <table className="w-full border rounded">
-            <thead><tr><th className="text-left p-2">ID</th><th className="text-left p-2">Nombre</th></tr></thead>
-            <tbody>
-              {dPager.view.map(d => (<tr key={d.id}><td className="p-2">{d.id}</td><td className="p-2">{d.name ?? d.fullName ?? "-"}</td></tr>))}
-            </tbody>
-          </table>
-          <Pager {...dPager} />
-        </section>
-      )}
+      {/* Operaciones + Alertas */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card
+          title="Operaciones"
+          actions={<button className="rounded-xl px-3 py-1.5 border hover:bg-gray-50">Exportar</button>}
+        >
+          <ul className="list-disc pl-5 space-y-2 text-sm">
+            <li><Link to="/admin/doctors" className="text-blue-600 hover:underline">Configurar especialidades / Doctores</Link></li>
+            <li><Link to="/admin/assign/doctor" className="text-blue-600 hover:underline">Asignar agenda a médicos</Link></li>
+            <li><Link to="/admin/sucursal" className="text-blue-600 hover:underline">Sucursales</Link></li>
+            <li><Link to="/admin/list/doctor" className="text-blue-600 hover:underline">Revisar reportes de doctores</Link></li>
+          </ul>
 
-      {tab==="appointments" && (
-        <section>
-          <table className="w-full border rounded text-sm">
-            <thead>
-              <tr>
-                <th className="text-left p-2">ID</th>
-                <th className="text-left p-2">Paciente</th>
-                <th className="text-left p-2">Doctor</th>
-                <th className="text-left p-2">Inicio</th>
-                <th className="text-left p-2">Fin</th>
-                <th className="text-left p-2">Triage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {aPager.view.map(a => (
-                <tr key={a.id}>
-                  <td className="p-2">{a.id}</td>
-                  <td className="p-2">{a.patientId}</td>
-                  <td className="p-2">{a.doctorId}</td>
-                  <td className="p-2">{new Date(a.start).toLocaleString()}</td>
-                  <td className="p-2">{new Date(a.end).toLocaleString()}</td>
-                  <td className="p-2">{a.triageLevel ?? "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Pager {...aPager} />
-        </section>
-      )}
-    </main>
-  );
-}
+          {/* Enlace a tu vista de listados */}
+          <div className="mt-6">
+            <Link to="/admin/tables" className="inline-block rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
+              Ver listados
+            </Link>
+          </div>
+        </Card>
 
-function Pager({ page, setPage, maxPage }:{ page:number; setPage:(n:number)=>void; maxPage:number }){
-  return (
-    <div className="flex items-center gap-2 mt-3">
-      <button className="border rounded px-3 py-1" onClick={()=>setPage(Math.max(1, page-1))}>Anterior</button>
-      <span>Página {page} / {maxPage}</span>
-      <button className="border rounded px-3 py-1" onClick={()=>setPage(Math.min(maxPage, page+1))}>Siguiente</button>
-    </div>
+        <Card title="Alertas">
+          <p className="text-sm text-gray-600">{loading ? "Cargando…" : "Sin alertas por ahora."}</p>
+        </Card>
+      </div>
+
+      <div className="mt-8 border-t pt-4 text-xs text-gray-500">
+        © {new Date().getFullYear()} MediTriage
+      </div>
+    </Layout>
   );
 }

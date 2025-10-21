@@ -48,12 +48,12 @@ export default function Login() {
 
   useEffect(() => {
     if (!loading && user?.role) {
-      if (user.role === "Patient") {
+      if (user.role === "patient") {
         navigate("/", { replace: true });
-      } else if (user.role === "Doctor") {
-        navigate("/home/Doctor", { replace: true });
-      } else if (user.role === "Admin") {
-        navigate("/home/admin", { replace: true });
+      } else if (user.role === "doctor") {
+        navigate("/doctor", { replace: true });
+      } else if (user.role === "admin") {
+        navigate("/admin", { replace: true });
       }
     }
   }, [user, loading, navigate]);

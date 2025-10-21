@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -21,6 +22,12 @@ builder.Services.AddControllers()
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+
+        // ✅ ARREGLO CLAVE (recomendado):
+        // Permite que "patient" | "doctor" | "admin" mapeen a tu enum Role en los DTOs
+        opt.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+        );
     });
 
 // ==== Swagger ====
@@ -56,11 +63,17 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// ==== CORS (frontend Vite) ====
+// ==== CORS ====
+// Dev: habilita Vite (http://localhost:5173). Prod: configura tu dominio real.
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", p => p
-        .AllowAnyOrigin()
+    options.AddPolicy("DevAll", p => p
+        .WithOrigins("http://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+
+    options.AddPolicy("ProdUI", p => p
+        .WithOrigins(builder.Configuration["Cors:ProdOrigin"] ?? "https://tu-dominio.com")
         .AllowAnyHeader()
         .AllowAnyMethod());
 });
@@ -111,9 +124,10 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// Token service
+// Token service + HttpClient
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // ==== Swagger solo en Desarrollo ====
@@ -127,8 +141,11 @@ if (app.Environment.IsDevelopment())
 }
 
 // ==== HTTP / CORS ====
+// Opción A (HTTPS) es la MÁS RECOMENDABLE para que local se parezca a producción.
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+
+// CORS: usa DevAll en desarrollo y ProdUI en producción
+app.UseCors(app.Environment.IsDevelopment() ? "DevAll" : "ProdUI");
 
 // ==== Excepciones globales ====
 app.UseGlobalExceptionHandling();
@@ -156,13 +173,21 @@ app.MapControllers();
 // ping
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// ==== Seed ====
+// ==== Migrate + Seed al inicio ====
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // 👇 LOG para confirmar instancia/BD reales
+    var conn = db.Database.GetDbConnection();
+    Console.WriteLine($"[DB] Provider={db.Database.ProviderName} DataSource={conn.DataSource} Database={conn.Database}");
+
     await db.Database.MigrateAsync();
     await DbSeeder.SeedAsync(db, doctors: 18, patients: 80, maxAppointmentsPerPatient: 3, force: false);
 }
 
+
+// (Opcional) tokens externos
 var hfToken = builder.Configuration["HuggingFace:Token"];
+
 app.Run();

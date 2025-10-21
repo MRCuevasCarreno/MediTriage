@@ -32,14 +32,14 @@ export default function Paso1Identificacion(
       <p className="text-sm text-gray-500 mb-6">Paso 1: Identificar paciente</p>
 
       <label className="text-sm font-medium">Documento de identificación</label>
-      <select
+ { /*    <select
         value={docType}
         onChange={(e) => setDocType(e.target.value as any)}
         className="mt-1 mb-4 w-full rounded-xl border px-3 py-2"
       >
         <option value="RUT">RUT (Chile)</option>
         <option value="PASAPORTE">Pasaporte / Extranjería</option>
-      </select>
+      </select>*/}
 
       {docType === "RUT" && (
         <div className="mb-4">

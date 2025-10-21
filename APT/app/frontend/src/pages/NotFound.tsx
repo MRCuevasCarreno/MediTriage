@@ -1,13 +1,12 @@
 import React from "react";
-import Layout from "../components/Layout";
-import Card from "../components/Card";
+import Card from "../components/ui/Card";
 
 export default function NotFound() {
   return (
-    <Layout>
+    <div className="max-w-2xl mx-auto">
       <Card title="No encontrado">
         <p className="text-sm">La página no existe.</p>
       </Card>
-    </Layout>
+    </div>
   );
 }
