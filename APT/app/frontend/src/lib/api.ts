@@ -1,12 +1,14 @@
 // src/lib/api.ts
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
+// Apunta directo al backend (SIN /api)
+export const baseURL =
+  import.meta.env.VITE_API_BASE_URL || "https://localhost:7290";
 console.info("[API] baseURL =", baseURL);
 
 export const api = axios.create({
   baseURL,
-  headers: { "Content-Type": "application/json" }
+  headers: { "Content-Type": "application/json" },
 });
 
 export const setAuthToken = (token: string | null) => {
