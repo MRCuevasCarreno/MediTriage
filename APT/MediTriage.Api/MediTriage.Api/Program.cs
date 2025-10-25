@@ -23,8 +23,7 @@ builder.Services.AddControllers()
         opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 
-        // ✅ ARREGLO CLAVE (recomendado):
-        // Permite que "patient" | "doctor" | "admin" mapeen a tu enum Role en los DTOs
+        // ✅ Permite mapear enums como texto (por ejemplo, "doctor", "admin", etc.)
         opt.JsonSerializerOptions.Converters.Add(
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
         );
@@ -36,7 +35,6 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "MediTriage API", Version = "v1" });
 
-    // JWT en Swagger
     var jwtScheme = new OpenApiSecurityScheme
     {
         BearerFormat = "JWT",
@@ -64,21 +62,19 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
 // ==== CORS ====
-// Dev: habilita Vite (http://localhost:5173). Prod: configura tu dominio real.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevAll", p => p
-        .WithOrigins("http://localhost:5173")
+        .WithOrigins(
+            "http://localhost:5173",            // Vite local
+            "https://enrico-unthrust-clare.ngrok-free.dev" // ✅ dominio ngrok actual
+        )
         .AllowAnyHeader()
-        .AllowAnyMethod());
-
-    options.AddPolicy("ProdUI", p => p
-        .WithOrigins(builder.Configuration["Cors:ProdOrigin"] ?? "https://tu-dominio.com")
-        .AllowAnyHeader()
-        .AllowAnyMethod());
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
 
-// ==== ModelState → ErrorResponse homogéneo ====
+// ==== ModelState homogéneo ====
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -124,13 +120,12 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// Token service + HttpClient
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-// ==== Swagger solo en Desarrollo ====
+// ==== Swagger ====
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -140,17 +135,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// ==== HTTP / CORS ====
-// Opción A (HTTPS) es la MÁS RECOMENDABLE para que local se parezca a producción.
+// ==== HTTPS + CORS ====
 app.UseHttpsRedirection();
+app.UseCors("DevAll");
 
-// CORS: usa DevAll en desarrollo y ProdUI en producción
-app.UseCors(app.Environment.IsDevelopment() ? "DevAll" : "ProdUI");
-
-// ==== Excepciones globales ====
+// ==== Middleware ====
 app.UseGlobalExceptionHandling();
-
-// ==== AuthZ ====
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -169,25 +159,16 @@ app.Use(async (ctx, next) =>
 
 // ==== Endpoints ====
 app.MapControllers();
-
-// ping
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// ==== Migrate + Seed al inicio ====
+// ==== Migración y seed ====
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    // 👇 LOG para confirmar instancia/BD reales
     var conn = db.Database.GetDbConnection();
     Console.WriteLine($"[DB] Provider={db.Database.ProviderName} DataSource={conn.DataSource} Database={conn.Database}");
-
     await db.Database.MigrateAsync();
     await DbSeeder.SeedAsync(db, doctors: 18, patients: 80, maxAppointmentsPerPatient: 3, force: false);
 }
-
-
-// (Opcional) tokens externos
-var hfToken = builder.Configuration["HuggingFace:Token"];
 
 app.Run();
