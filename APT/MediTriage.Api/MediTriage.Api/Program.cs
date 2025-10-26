@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.HttpOverrides; // ⬅️ importante para ngrok/https
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,11 +22,7 @@ builder.Services.AddControllers()
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-
-        // ✅ Permite mapear enums como texto (por ejemplo, "doctor", "admin", etc.)
-        opt.JsonSerializerOptions.Converters.Add(
-            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-        );
+        opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
 
 // ==== Swagger ====
@@ -61,17 +57,26 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// ==== CORS ====
+// ==== CORS (flexible para ngrok) ====
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevAll", p => p
-        .WithOrigins(
-            "http://localhost:5173",            // Vite local
-            "https://enrico-unthrust-clare.ngrok-free.dev" // ✅ dominio ngrok actual
-        )
+        .SetIsOriginAllowed(origin =>
+        {
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+
+            // Vite local
+            if (uri.Scheme == "http" && uri.Host == "localhost" && uri.Port == 5173)
+                return true;
+
+            // Cualquier subdominio de ngrok
+            var host = uri.Host.ToLowerInvariant();
+            return host.EndsWith(".ngrok-free.dev") || host.EndsWith(".ngrok-free.app");
+        })
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials());
+        .AllowCredentials()
+    );
 });
 
 // ==== ModelState homogéneo ====
@@ -120,6 +125,14 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// ==== Forwarded Headers (ngrok) ====
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownNetworks.Clear();
+    o.KnownProxies.Clear();
+});
+
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddHttpClient();
 
@@ -135,8 +148,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// ==== HTTPS + CORS ====
+// ==== Orden de middlewares recomendado ====
+app.UseForwardedHeaders();   // ⬅️ primero, para respetar X-Forwarded-Proto de ngrok
 app.UseHttpsRedirection();
+
+app.UseRouting();
 app.UseCors("DevAll");
 
 // ==== Middleware ====
@@ -159,7 +175,10 @@ app.Use(async (ctx, next) =>
 
 // ==== Endpoints ====
 app.MapControllers();
+
+// Health (ambas rutas para evitar confusión con /api/*)
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 
 // ==== Migración y seed ====
 using (var scope = app.Services.CreateScope())

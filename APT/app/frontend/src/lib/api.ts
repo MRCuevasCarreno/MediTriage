@@ -1,16 +1,30 @@
 // src/lib/api.ts
 import axios from "axios";
 
-// Apunta directo al backend (SIN /api)
-export const baseURL =
-  import.meta.env.VITE_API_BASE_URL || "https://localhost:7290";
+/**
+ * Base URL = dominio público del front (o VITE_API_BASE_URL si lo definiste).
+ * IMPORTANTE: NO incluyas '/api' aquí. El path '/api' va en cada request.
+ */
+const rawBase = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+// quitar trailing slash si lo hubiera
+export const baseURL = rawBase.replace(/\/$/, "");
 console.info("[API] baseURL =", baseURL);
 
 export const api = axios.create({
-  baseURL,
+  baseURL, // ejemplo real: https://enrico-unthrust-clare.ngrok-free.dev
   headers: { "Content-Type": "application/json" },
 });
 
+// Adjunta JWT en todas las requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  // no usamos cookies; todo por header
+  config.withCredentials = false;
+  return config;
+});
+
+// Helpers opcionales
 export const setAuthToken = (token: string | null) => {
   if (token) api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   else delete api.defaults.headers.common["Authorization"];
