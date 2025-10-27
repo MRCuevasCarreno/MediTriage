@@ -11,8 +11,8 @@ export default function AdminNavBar() {
     nav('/login', { replace: true });
   }
   return (
-    <nav style={{ display:'flex', gap:12, alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #e5e7eb' }}>
-      <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+    <nav>
+    {/*  <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <strong>MediTriage Admin</strong>
   <Link to="/home/admin">Dashboard</Link>
   <Link to="/admin/doctors">Doctores</Link>
@@ -23,7 +23,7 @@ export default function AdminNavBar() {
         <button onClick={handleLogout}>
           Cerrar Sesión
         </button>
-      </div>
+      </div>*/}
     </nav>
   );
 }

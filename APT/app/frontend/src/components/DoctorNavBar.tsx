@@ -11,7 +11,9 @@ export default function DoctorNavBar() {
     nav('/login', { replace: true });
   }
   return (
-    <nav style={{ display:'flex', gap:12, alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #e5e7eb' }}>
+
+    <nav>
+      {/*
       <div style={{ display:'flex', gap:12, alignItems:'center' }}>
         <strong>MediTriage Doctor</strong>
         <a href="/home/Doctor">Citas</a>
@@ -21,7 +23,7 @@ export default function DoctorNavBar() {
         <button onClick={handleLogout}>
           Cerrar Sesión
         </button>
-      </div>
+      </div> */}
     </nav>
   );
 }

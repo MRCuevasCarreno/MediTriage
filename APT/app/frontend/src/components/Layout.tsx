@@ -1,3 +1,4 @@
+// src/components/Layout.tsx
 import React from "react";
 import NavBar from "./NavBar";
 import Container from "./Container";
@@ -9,7 +10,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <Container>{children}</Container>
       <footer className="mt-12 border-t">
         <Container>
-          <p className="text-xs text-gray-500 py-6">© {new Date().getFullYear()} MediTriage</p>
+          <p className="text-xs text-gray-500 py-6">
+            © {new Date().getFullYear()} MediTriage
+          </p>
         </Container>
       </footer>
     </div>
