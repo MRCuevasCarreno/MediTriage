@@ -1,16 +1,15 @@
-
 import React, { useState } from "react";
+import { baseURL, setAuthToken } from "../lib/api"; // 👈 importa tu baseURL
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string|null>(null);
-  const [emailError, setEmailError] = useState<string|null>(null);
-  const [passwordError, setPasswordError] = useState<string|null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   function validateEmail(email: string) {
-    // Simple regex for email validation
     return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
   }
 
@@ -33,34 +32,62 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await fetch("https://localhost:7290/api/auth/login", {
+      const res = await fetch(`${baseURL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          Accept: "application/json",
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
+
       if (!res.ok) {
         setError("Credenciales inválidas");
         setLoading(false);
         return;
       }
+
       const body = await res.json();
-      // Guardar en localStorage
-      localStorage.setItem("token", body.token);
-      localStorage.setItem("expiresAtUtc", body.expiresAtUtc);
-      localStorage.setItem("email", body.email);
-      localStorage.setItem("fullName", body.fullName);
-      localStorage.setItem("role", body.role);
+
+      // el backend a veces viene como { data: {...} }
+      const payload = body?.data ? body.data : body;
+
+      const token = payload.token;
+      const expiresAtUtc = payload.expiresAtUtc;
+      const fullName = payload.fullName;
+      const role = payload.role;
+
+      if (!token) {
+        setError("No se recibió token del servidor");
+        setLoading(false);
+        return;
+      }
+
+      // ⬇️ esto escribe el header en axios y también en localStorage
+      setAuthToken(token, "token");
+      // extra: para compatibilidad con tu código que lee "authToken"
+      try {
+        localStorage.setItem("authToken", token);
+        if (expiresAtUtc) localStorage.setItem("expiresAtUtc", expiresAtUtc);
+        if (email) localStorage.setItem("email", email);
+        if (fullName) localStorage.setItem("fullName", fullName);
+        if (role) localStorage.setItem("role", role);
+      } catch {
+        /* ignore */
+      }
+
       setLoading(false);
+
       // Redirigir según rol
-      if (body.role === "Patient") {
+      if (role === "Patient") {
         window.location.href = "/";
-      } else if (body.role === "Doctor") {
+      } else if (role === "Doctor") {
         window.location.href = "/home/Doctor";
-      } else if (body.role === "Admin") {
+      } else if (role === "Admin") {
         window.location.href = "/home/admin";
+      } else {
+        // fallback
+        window.location.href = "/";
       }
     } catch {
       setError("Error de red o servidor");
@@ -73,7 +100,6 @@ export default function Login() {
       <div className="bg-white p-6 rounded-xl shadow-md w-80">
         <h1 className="text-xl font-bold mb-4">Login</h1>
         <form className="space-y-3" onSubmit={handleSubmit}>
-          {/* Alerta general solo para error global */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-2 text-center">
               {error}
@@ -83,9 +109,11 @@ export default function Login() {
             <input
               type="email"
               placeholder="Email"
-              className={`w-full border px-3 py-2 rounded ${emailError ? 'border-red-500 bg-red-50' : ''}`}
+              className={`w-full border px-3 py-2 rounded ${
+                emailError ? "border-red-500 bg-red-50" : ""
+              }`}
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
             {emailError && <div className="text-red-600 text-xs mt-1">{emailError}</div>}
@@ -94,12 +122,16 @@ export default function Login() {
             <input
               type="password"
               placeholder="Password"
-              className={`w-full border px-3 py-2 rounded ${passwordError ? 'border-red-500 bg-red-50' : ''}`}
+              className={`w-full border px-3 py-2 rounded ${
+                passwordError ? "border-red-500 bg-red-50" : ""
+              }`}
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
-            {passwordError && <div className="text-red-600 text-xs mt-1">{passwordError}</div>}
+            {passwordError && (
+              <div className="text-red-600 text-xs mt-1">{passwordError}</div>
+            )}
           </div>
           <button
             className="bg-blue-600 text-white px-4 py-2 rounded w-full"
@@ -107,7 +139,6 @@ export default function Login() {
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
-          {/* Alerta roja debajo del botón si hay error global */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mt-3 text-center">
               {error}
@@ -118,4 +149,3 @@ export default function Login() {
     </div>
   );
 }
-

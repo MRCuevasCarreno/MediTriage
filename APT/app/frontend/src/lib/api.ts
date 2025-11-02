@@ -5,24 +5,27 @@ import type { AxiosError, AxiosRequestConfig } from "axios";
 /**
  * =========================================================
  *  BaseURL del BACKEND
- *  - Usa VITE_API_BASE_URL si existe (recomendado).
- *  - NO incluyas '/api' en la base; '/api' va en cada request.
- *  - Fallback a https://localhost:7290 (Kestrel dev).
+ *  Prioridad:
+ *  1. VITE_API_BASE_URL (si la pusiste en .env)
+ *  2. window.location.origin  (el mismo dominio que estás viendo: ngrok)
+ *  3. https://localhost:7290  (último recurso para tu PC)
  * =========================================================
  */
-const rawBase =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
-  "https://localhost:7290";
+const envBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
+
+// OJO: window sólo existe en el navegador
+const originBase =
+  typeof window !== "undefined" ? window.location.origin.replace(/\/$/, "") : undefined;
+
+const rawBase = envBase || originBase || "https://localhost:7290";
 
 // Quitar el trailing slash si lo hubiera
-export const baseURL = rawBase.replace(/\/$/, "");
+export const baseURL = rawBase;
 console.info("[API] baseURL =", baseURL);
 
 /**
  * =========================================================
  *  Gestión de Token
- *  - Leemos cualquiera de estas llaves: 'token' o 'authToken'
- *  - setAuthToken por defecto escribe en 'token' (puedes cambiarlo)
  * =========================================================
  */
 export const TOKEN_KEYS = ["token", "authToken"] as const;
@@ -36,11 +39,6 @@ function readToken(): string | null {
   return null;
 }
 
-/**
- * Setea o limpia el token en:
- * - Header Authorization del cliente axios,
- * - y (opcionalmente) localStorage bajo la llave indicada.
- */
 export function setAuthToken(token: string | null, storageKey: TokenKey = "token") {
   if (token) {
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -67,11 +65,11 @@ export function setAuthToken(token: string | null, storageKey: TokenKey = "token
 export const api = axios.create({
   baseURL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: false, // No usamos cookies; todo va por Authorization
-  timeout: 20000, // 20s para no colgar indefinidamente
+  withCredentials: false,
+  timeout: 20000,
 });
 
-// Bootstrap del header Authorization desde localStorage (si había token)
+// Bootstrap del header Authorization desde localStorage
 const bootToken = readToken();
 if (bootToken) {
   api.defaults.headers.common.Authorization = `Bearer ${bootToken}`;
@@ -80,20 +78,17 @@ if (bootToken) {
 /**
  * =========================================================
  *  Interceptor de request
- *  - Garantiza withCredentials=false
- *  - Inyecta Authorization si aún no estuviera
  * =========================================================
  */
 api.interceptors.request.use((config) => {
   config.withCredentials = false;
 
-  // Si por alguna razón no está seteado, lo intentamos leer.
   if (!config.headers) config.headers = {};
-  // @ts-expect-error: Axios headers indexados
-  if (!("Authorization" in config.headers) || !config.headers.Authorization) {
+  // @ts-expect-error
+  if (!config.headers.Authorization) {
     const t = readToken();
     if (t) {
-      // @ts-expect-error: Axios headers indexados
+      // @ts-expect-error
       config.headers.Authorization = `Bearer ${t}`;
     }
   }
@@ -104,7 +99,6 @@ api.interceptors.request.use((config) => {
 /**
  * =========================================================
  *  Interceptor de response
- *  - Normaliza el mensaje de error para consumirlo fácil en el UI.
  * =========================================================
  */
 export type ApiError = AxiosError & { status?: number; message: string };
@@ -134,11 +128,7 @@ api.interceptors.response.use(
 );
 
 /**
- * =========================================================
- *  Helpers genéricos (tipados)
- *  - Usa SIEMPRE rutas con '/api/...'
- *  - Ej: get<User>('/api/users/1')
- * =========================================================
+ * Helpers
  */
 export async function get<T>(
   url: string,
@@ -181,9 +171,6 @@ export async function del<T>(url: string, cfg?: AxiosRequestConfig): Promise<T> 
   return res.data as T;
 }
 
-/**
- * Subida de archivos (multipart/form-data)
- */
 export async function upload<T>(
   url: string,
   file: File | Blob,
@@ -208,9 +195,6 @@ export async function upload<T>(
   return res.data as T;
 }
 
-/**
- * Ping rápido de salud del backend
- */
 export async function health(): Promise<"ok" | "down"> {
   try {
     await api.get("/api/health");
