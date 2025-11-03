@@ -10,25 +10,50 @@ export default function Paso3CentroProfesional({ onNext, onBack }: { onNext: (da
   const [centers, setCenters] = useState<Center[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [query, setQuery] = useState("");
+  const [comunaFilter, setComunaFilter] = useState<string>('');
+  const [especialidadFilter, setEspecialidadFilter] = useState<string>('');
+  const [availableComunas, setAvailableComunas] = useState<string[]>([]);
+  const [availableEspecialidades] = useState<Array<{ id: string; label: string; apiName: string }>>([
+    { id: 'all', label: 'Todas', apiName: '' },
+    { id: 'med-gen', label: 'Medicina General', apiName: 'Medicina' },
+    { id: 'derm', label: 'Dermatología', apiName: 'Dermatología' },
+    { id: 'cardio', label: 'Cardiología', apiName: 'Cardiología' },
+    { id: 'pedi', label: 'Pediatría', apiName: 'Pediatría' },
+    { id: 'kine', label: 'Kinesiología', apiName: 'Kinesiología' },
+    { id: 'tele', label: 'Telemedicina', apiName: 'Telemedicina' },
+  ]);
   const [loading, setLoading] = useState(false);
   const [selectedCenter, setSelectedCenter] = useState<string|null>(null);
   const [selectedProfessional, setSelectedProfessional] = useState<string|null>(null);
 
-  // Obtener especialidad seleccionada
-  const servicioId = (window as any).wizardData?.servicioId || "med-gen";
+  // Obtener especialidad seleccionada desde el wizard (si viene del triage)
+  const initialServicioId = (window as any).wizardData?.servicioId || "";
 
-  // Cargar centros y profesionales desde API
+  // Función para construir la URL de fetch con filtros
+  const buildSucursalesUrl = (especialidadApiName?: string, comuna?: string) => {
+    const base = 'https://localhost:7290/api/Sucursales';
+    const params = new URLSearchParams();
+    if (especialidadApiName) params.set('especialidad', especialidadApiName);
+    if (comuna) params.set('comuna', comuna);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  };
+
+  // Cargar centros y profesionales desde API (dependiente de filtros)
   useEffect(() => {
-    setLoading(true);
-    fetch("https://localhost:7290/api/Sucursales", {
-      headers: {
-        accept: "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
-      }
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Error API");
+    let isMounted = true;
+    const cargar = async () => {
+      setLoading(true);
+      try {
+        // map selected especialidadFilter (servicio id) to api name
+        const esp = availableEspecialidades.find(e => e.id === especialidadFilter)?.apiName || '';
+        const url = buildSucursalesUrl(esp || undefined, comunaFilter || undefined);
+        const res = await fetch(url, {
+          headers: {
+            accept: 'application/json'
+          }
+        });
+        if (!res.ok) throw new Error('Error API');
         const json = await res.json();
         if (Array.isArray(json?.data)) {
           const apiCenters = json.data.map((c: any) => ({
@@ -37,7 +62,13 @@ export default function Paso3CentroProfesional({ onNext, onBack }: { onNext: (da
             city: c.comuna,
             address: c.direccion
           }));
+          if (!isMounted) return;
           setCenters(apiCenters);
+          // populate available comunas from centers (for the comuna filter options)
+          const comunas = Array.from(new Set(apiCenters.map((c: any) => String(c.city || '')).filter(Boolean))) as string[];
+          comunas.sort();
+          setAvailableComunas(comunas);
+
           // Mapear doctores a Professional[]
           const apiProfessionals = json.data.flatMap((c: any) =>
             (c.doctors || []).map((d: any) => ({
@@ -45,25 +76,37 @@ export default function Paso3CentroProfesional({ onNext, onBack }: { onNext: (da
               name: d.user?.name || d.name,
               centerId: String(c.id),
               services: [
-                d.specialty === "Medicina General" ? "med-gen" :
-                d.specialty === "Dermatología" ? "derm" :
-                d.specialty === "Cardiología" ? "cardio" :
-                d.specialty === "Pediatría" ? "pedi" :
-                d.specialty === "Kinesiología" ? "kine" :
-                d.specialty === "Telemedicina" ? "tele" :
-                d.specialty?.toLowerCase() || ""
+                d.specialty === 'Medicina General' ? 'med-gen' :
+                d.specialty === 'Dermatología' ? 'derm' :
+                d.specialty === 'Cardiología' ? 'cardio' :
+                d.specialty === 'Pediatría' ? 'pedi' :
+                d.specialty === 'Kinesiología' ? 'kine' :
+                d.specialty === 'Telemedicina' ? 'tele' :
+                d.specialty?.toLowerCase() || ''
               ]
             }))
           );
           setProfessionals(apiProfessionals);
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      } catch (e) {
+        // ignore errors for now
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
-  // Filtrar profesionales por especialidad
-  const prosForService = professionals.filter(p => p.services.includes(servicioId));
+    cargar();
+    return () => { isMounted = false; };
+  }, [especialidadFilter, comunaFilter]);
+
+  // Si initialServicioId viene del Paso 2 (triage), rellenar el filtro de especialidad al cargar
+  useEffect(() => {
+    if (initialServicioId) setEspecialidadFilter(initialServicioId);
+  }, [initialServicioId]);
+
+  // Filtrar profesionales por especialidad seleccionada
+  const servicioId = (especialidadFilter && especialidadFilter !== 'all') ? especialidadFilter : (initialServicioId || '');
+  const prosForService = servicioId ? professionals.filter(p => p.services.includes(servicioId)) : professionals;
 
   // Solo mostrar centros que tengan al menos un doctor con la especialidad seleccionada
   let centersOffering = centers.filter(center => {
@@ -91,13 +134,28 @@ export default function Paso3CentroProfesional({ onNext, onBack }: { onNext: (da
     <>
     <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
       <h2 className="text-xl font-semibold mb-4">Selecciona centro y profesional</h2>
-      <input
-        type="text"
-        className="w-full rounded-xl border px-3 py-2 mb-4"
-        placeholder="Buscar centro, ciudad o dirección..."
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <select className="rounded-xl border px-3 py-2" value={especialidadFilter} onChange={e => setEspecialidadFilter(e.target.value)}>
+          {availableEspecialidades.map(e => (
+            <option key={e.id} value={e.id}>{e.label}</option>
+          ))}
+        </select>
+
+        <select className="rounded-xl border px-3 py-2" value={comunaFilter} onChange={e => setComunaFilter(e.target.value)}>
+          <option value="">Todas las comunas</option>
+          {availableComunas.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+
+        <input
+          type="text"
+          className="w-full rounded-xl border px-3 py-2"
+          placeholder="Buscar centro, ciudad o dirección..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+        />
+      </div>
       {loading ? (
         <div className="text-gray-500">Cargando centros y profesionales...</div>
       ) : (
