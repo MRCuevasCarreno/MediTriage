@@ -39,18 +39,7 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">MediTriage</h1>
-          <div className="text-sm text-gray-500">Inicio</div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full bg-yellow-50 px-3 py-1 text-yellow-800 border border-yellow-200 text-sm">
-            🛡️ Admin
-          </span>
-          <button onClick={logout} className="text-sm text-gray-700 hover:underline">Cerrar Sesión</button>
-        </div>
-      </div>
+   
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
@@ -85,9 +74,7 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="mt-8 border-t pt-4 text-xs text-gray-500">
-        © {new Date().getFullYear()} MediTriage
-      </div>
+
     </Layout>
   );
 }

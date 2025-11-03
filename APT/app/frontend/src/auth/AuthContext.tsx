@@ -1,3 +1,4 @@
+// src/auth/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { setAuthToken, post, get } from "../lib/api";
 
@@ -45,15 +46,17 @@ type LoginResponse = {
   id?: string | number;
   doctorId?: string | number;
   email: string;
-  fullName: string;
-  role: BackendRole; // puede venir 2, "2", "Admin", etc.
+  fullName?: string;  // a veces viene fullName
+  name?: string;      // a veces viene name
+  role: BackendRole;  // puede venir 2, "2", "Admin", etc.
 };
 
 type MeResponse = {
   id?: string | number;
   doctorId?: string | number;
   email: string;
-  fullName: string; // el backend envía 'fullName'
+  fullName?: string;  // algunos backends devuelven fullName
+  name?: string;      // otros devuelven name
   role: BackendRole;
 };
 
@@ -63,7 +66,7 @@ type MeResponse = {
 type AuthCtx = {
   token: string | null;
   user: User | null;
-  /** listo para usar (ya terminó el /auth/me o se determinó que no hay token) */
+  /** listo para usar (ya terminó el /api/me o se determinó que no hay token) */
   ready: boolean;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -82,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState<boolean>(false);
 
-  /** Bootstrap de sesión: set header y consulta /auth/me */
+  /** Bootstrap de sesión: set header y consulta /api/me */
   useEffect(() => {
     let canceled = false;
 
@@ -99,19 +102,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthToken(token);
 
       try {
-        const me = await get<MeResponse>("/api/auth/me");
+        // ✅ endpoint correcto
+        const me = await get<MeResponse>("/api/me");
         if (!canceled) {
           setUser({
             id: me.id,
             doctorId: me.doctorId,
             email: me.email,
-            fullName: me.fullName,
+            fullName: me.fullName ?? me.name ?? null, // mapeo seguro
             role: normalizeRole(me.role),
           });
         }
       } catch (err: any) {
         // Sólo limpiar si es 401 (token inválido/expirado)
-        if (!canceled && (err?.response?.status === 401)) {
+        const status = err?.response?.status ?? err?.status;
+        if (!canceled && status === 401) {
           localStorage.removeItem("token");
           setAuthToken(null);
           setToken(null);
@@ -123,9 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     bootstrap();
-    return () => {
-      canceled = true;
-    };
+    return () => { canceled = true; };
   }, [token]);
 
   /** Login con credenciales */
@@ -144,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: res.id,
       doctorId: res.doctorId,
       email: res.email,
-      fullName: res.fullName,
+      fullName: res.fullName ?? res.name ?? null, // mapeo seguro
       role: normalizeRole(res.role),
     });
 

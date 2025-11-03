@@ -1,43 +1,50 @@
+// src/layouts/MainLayout.tsx
 import React, { useState } from "react";
-import { Outlet, Link, NavLink } from "react-router-dom";
+import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import Container from "../components/ui/Container";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth, type Role } from "../auth/AuthContext";
 
 function Navbar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const linkCls = ({ isActive }) =>
+  const roleLabel: Record<Role, string> = {
+    admin: "Admin",
+    doctor: "Médico",
+    patient: "Paciente",
+  };
+
+  const linkCls = ({ isActive }: { isActive: boolean }) =>
     (isActive ? "text-gray-900 font-semibold" : "text-gray-600 hover:text-gray-900") +
     " transition-colors";
+
+  const displayName = user?.fullName ?? user?.email ?? "Usuario";
+  const initials =
+    displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s?.[0]?.toUpperCase() ?? "")
+      .join("") || "U";
+  const role = (user?.role ?? "patient") as Role;
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
+    logout?.();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
       <Container>
-        {/* barra superior */}
         <div className="relative h-28 md:h-32 flex items-center">
-          {/* logo: isotipo en móvil / logotipo horizontal en desktop */}
-        <Link to="/" className="shrink-0 flex items-center gap-2">
-  {/* Desktop */}
-  <img
-    src="/brand/medi-triage-logo2.png"
-    alt="MediTriage"
-    className="hidden md:block h-24 lg:h-32 xl:h-36 w-auto"
-    decoding="async"
-    draggable={false}
-  />
-  {/* Mobile (si quieres también un poco más grande que ahora) */}
-  <img
-    src="/brand/medi-triage-logo2.png"
-    alt="MediTriage"
-    className="md:hidden h-24 lg:h-32 xl:h-36 w-auto"
-    decoding="async"
-    draggable={false}
-  />
-</Link>
+          <Link to="/" className="shrink-0 flex items-center gap-2">
+            <img src="/brand/medi-triage-logo2.png" alt="MediTriage" className="hidden md:block h-24 lg:h-32 xl:h-36 w-auto" />
+            <img src="/brand/medi-triage-logo2.png" alt="MediTriage" className="md:hidden h-24 lg:h-32 xl:h-36 w-auto" />
+          </Link>
 
-
-          {/* nav CENTRADO */}
           <nav className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-10 text-sm">
             <NavLink end to="/" className={linkCls}>Inicio</NavLink>
             <NavLink to="/agendar-invitado" className={linkCls}>Agendar</NavLink>
@@ -47,41 +54,35 @@ function Navbar() {
             {user?.role === "admin" && <NavLink to="/admin" className={linkCls}>Admin</NavLink>}
           </nav>
 
-          {/* acciones (derecha) */}
           <div className="ml-auto flex items-center gap-3">
             {!user ? (
               <>
-                <NavLink to="/login" className="text-sm underline underline-offset-4 decoration-1">
-                  Entrar
-                </NavLink>
-                <NavLink
-                  to="/register"
-                  className="text-sm rounded-xl border px-3 py-1.5 hover:bg-gray-50"
-                >
-                  Crear cuenta
-                </NavLink>
+                <NavLink to="/login" className="text-sm underline underline-offset-4 decoration-1">Entrar</NavLink>
+                <NavLink to="/register" className="text-sm rounded-xl border px-3 py-1.5 hover:bg-gray-50">Crear cuenta</NavLink>
               </>
             ) : (
-              <button
-                onClick={logout}
-                className="text-sm rounded-xl border px-3 py-1.5 hover:bg-gray-50"
-              >
-                Salir
-              </button>
+              <>
+                <div className="hidden sm:flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold">
+                    {initials}
+                  </div>
+                  <div className="leading-tight text-right">
+                    <div className="text-sm font-medium">{displayName}</div>
+                    <div className="text-xs text-gray-500">{roleLabel[role]}</div>
+                  </div>
+                </div>
+                <button onClick={handleLogout} className="text-sm rounded-xl border px-3 py-1.5 hover:bg-gray-50">
+                  Salir
+                </button>
+              </>
             )}
 
-            {/* menú móvil */}
-            <button
-              className="md:hidden rounded-xl border px-3 py-1.5 text-sm"
-              onClick={() => setOpen((v) => !v)}
-              aria-label="Abrir menú"
-            >
+            <button className="md:hidden rounded-xl border px-3 py-1.5 text-sm" onClick={() => setOpen((v) => !v)} aria-label="Abrir menú">
               Menú
             </button>
           </div>
         </div>
 
-        {/* menú móvil desplegable */}
         {open && (
           <div className="md:hidden pb-3 flex flex-col gap-2 text-sm">
             <NavLink end to="/" className={linkCls} onClick={() => setOpen(false)}>Inicio</NavLink>
@@ -96,9 +97,7 @@ function Navbar() {
                 <NavLink to="/register" className={linkCls} onClick={() => setOpen(false)}>Crear cuenta</NavLink>
               </>
             ) : (
-              <button onClick={() => { setOpen(false); logout(); }} className="text-left">
-                Salir
-              </button>
+              <button onClick={() => { setOpen(false); handleLogout(); }} className="text-left">Salir</button>
             )}
           </div>
         )}
@@ -117,9 +116,7 @@ export default function MainLayout() {
         </Container>
       </main>
       <footer className="mt-8 border-t">
-        <Container>
-          <p className="text-xs text-gray-500 py-6">© {new Date().getFullYear()} MediTriage</p>
-        </Container>
+        <Container>{/* footer */}</Container>
       </footer>
     </div>
   );

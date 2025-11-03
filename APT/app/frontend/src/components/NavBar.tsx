@@ -25,21 +25,8 @@ export default function NavBar() {
   }
 
   return (
-    <nav
-      style={{
-        display: 'flex',
-        gap: 12,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '8px 0',
-        borderBottom: '1px solid #e5e7eb'
-      }}
-    >
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <strong>MediTriage</strong>
-        <Link to="/">Inicio</Link>
-      </div>
-
+    <nav>
+  {/*
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         {user ? (
           <>
@@ -53,7 +40,9 @@ export default function NavBar() {
             Iniciar Sesión
           </button>
         )}
-      </div>
+      </div> */}
     </nav>
+
+    
   )
 }
