@@ -1,3 +1,4 @@
+// src/pages/ListDoctorPage.tsx
 import AdminNavBar from "../components/AdminNavBar";
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -80,7 +81,7 @@ export default function ListDoctorPage() {
         }
 
         const json = await res.json();
-        // tu API parece devolver algo así: { data: { data: [...], totalPages: n } }
+        // { data: { data: [...], totalPages: n } }
         const docs = json?.data?.data || [];
         const pages = json?.data?.totalPages || 1;
 
@@ -113,7 +114,6 @@ export default function ListDoctorPage() {
           headers,
         });
         const json = await res.json();
-        // API returns { data: [ ... ] }
         setSucursales(json.data || []);
       } catch (err) {
         console.warn("No se pudieron obtener sucursales", err);
@@ -129,14 +129,18 @@ export default function ListDoctorPage() {
 
   return (
     <>
-      <AdminNavBar />
+      {/* 👇 marcamos esta vista como la activa */}
+      <AdminNavBar active="doctors" />
+
       <div className="max-w-3xl mx-auto p-6 mt-8">
         <h1 className="text-2xl font-bold mb-4">Listar Doctores</h1>
 
         {/* Filtros */}
         <div className="flex gap-4 mb-6 flex-wrap">
           <div>
-            <label className="block text-sm font-medium mb-1">Buscar por nombre:</label>
+            <label className="block text-sm font-medium mb-1">
+              Buscar por nombre:
+            </label>
             <input
               type="text"
               value={searchName}
@@ -158,7 +162,9 @@ export default function ListDoctorPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Dirección de orden:</label>
+            <label className="block text-sm font-medium mb-1">
+              Dirección de orden:
+            </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
@@ -169,7 +175,9 @@ export default function ListDoctorPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Tamaño de página:</label>
+            <label className="block text-sm font-medium mb-1">
+              Tamaño de página:
+            </label>
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
@@ -207,12 +215,19 @@ export default function ListDoctorPage() {
                     {doc.sucursal && doc.sucursal.length > 0 ? (
                       <div className="mt-1 space-y-1">
                         {doc.sucursal.map((s) => (
-                          <div key={s.id} className="text-sm border rounded p-2 bg-gray-50">
+                          <div
+                            key={s.id}
+                            className="text-sm border rounded p-2 bg-gray-50"
+                          >
                             <div>
                               <strong>{s.name}</strong>
                             </div>
-                            <div className="text-gray-700">Dirección: {s.address}</div>
-                            <div className="text-gray-700">Comuna: {s.location}</div>
+                            <div className="text-gray-700">
+                              Dirección: {s.address}
+                            </div>
+                            <div className="text-gray-700">
+                              Comuna: {s.location}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -231,7 +246,7 @@ export default function ListDoctorPage() {
                         return;
                       }
                       try {
-                        // tu payload original
+                        // ojo: este payload es el que tú usabas
                         const payload = { id: doc.userId, userId: doc.id };
                         const res = await fetch(`${baseURL}/api/Doctors`, {
                           method: "DELETE",
@@ -244,7 +259,9 @@ export default function ListDoctorPage() {
                         });
                         if (!res.ok) {
                           const txt = await res.text().catch(() => "");
-                          setDeleteMessage(`Error al eliminar: ${txt || res.status}`);
+                          setDeleteMessage(
+                            `Error al eliminar: ${txt || res.status}`
+                          );
                           return;
                         }
                         setDeleteMessage(`Doctor eliminado: ${doc.name}`);
@@ -288,7 +305,7 @@ export default function ListDoctorPage() {
                               <option value="">-- Seleccionar sucursal --</option>
                               {sucursales.map((s) => (
                                 <option key={s.id} value={s.id}>
-                                  {s.nombre || s.name}
+                                  {s.nombre || s.name || "—"}
                                 </option>
                               ))}
                             </select>
@@ -312,7 +329,10 @@ export default function ListDoctorPage() {
                                 }
                                 setAssignLoading((l) => ({ ...l, [doc.id]: true }));
                                 try {
-                                  const body = { idDoctor: doc.id, idSucursal: sucId };
+                                  const body = {
+                                    idDoctor: doc.id,
+                                    idSucursal: sucId,
+                                  };
                                   const res = await fetch(
                                     `${baseURL}/api/Sucursales/assignDoctor`,
                                     {
@@ -329,12 +349,13 @@ export default function ListDoctorPage() {
                                     const txt = await res.text().catch(() => "");
                                     setAssignMessage((m) => ({
                                       ...m,
-                                      [doc.id]: `Error al asignar: ${txt || res.status}`,
+                                      [doc.id]: `Error al asignar: ${
+                                        txt || res.status
+                                      }`,
                                     }));
                                     return;
                                   }
                                   const json = await res.json().catch(() => null);
-                                  // Expected: { data: [ { idDoctor, idSucursal, nombre, direccion, comuna } ], message }
                                   const assigned =
                                     json?.data &&
                                     Array.isArray(json.data) &&
@@ -344,12 +365,13 @@ export default function ListDoctorPage() {
                                   if (!assigned) {
                                     setAssignMessage((m) => ({
                                       ...m,
-                                      [doc.id]: "No se recibió respuesta válida del servidor",
+                                      [doc.id]:
+                                        "No se recibió respuesta válida del servidor",
                                     }));
                                     return;
                                   }
 
-                                  // Actualizar el doctor en el estado
+                                  // actualizamos la sucursal del doctor
                                   setDoctors((prev) =>
                                     prev.map((d) =>
                                       d.id === doc.id
@@ -389,7 +411,10 @@ export default function ListDoctorPage() {
                                     [doc.id]: "Error de red al asignar sucursal",
                                   }));
                                 } finally {
-                                  setAssignLoading((l) => ({ ...l, [doc.id]: false }));
+                                  setAssignLoading((l) => ({
+                                    ...l,
+                                    [doc.id]: false,
+                                  }));
                                 }
                               }}
                               className="w-full bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
@@ -398,7 +423,9 @@ export default function ListDoctorPage() {
                             </button>
 
                             {assignMessage[doc.id] && (
-                              <div className="text-sm mt-2">{assignMessage[doc.id]}</div>
+                              <div className="text-sm mt-2">
+                                {assignMessage[doc.id]}
+                              </div>
                             )}
                           </>
                         )}

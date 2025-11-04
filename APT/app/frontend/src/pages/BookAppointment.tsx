@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Layout from "../components/Layout";
 import Card from "../components/ui/Card";
 import Badge from "../components/Badge";
 
@@ -11,7 +10,6 @@ export default function BookAppointment() {
   function Back() { setStep(s => Math.max(1, s - 1)); }
 
   return (
-    <Layout>
       <div className="max-w-2xl mx-auto space-y-4">
         <Card title="Agendar cita">
           <div className="flex items-center gap-2 mb-4">
@@ -71,6 +69,5 @@ export default function BookAppointment() {
           )}
         </Card>
       </div>
-    </Layout>
   );
 }

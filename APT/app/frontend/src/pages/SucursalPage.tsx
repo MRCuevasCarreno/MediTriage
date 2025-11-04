@@ -10,7 +10,7 @@ export default function SucursalPage() {
         <div className="flex flex-col gap-4 mb-4">
           <Link to="/admin/list/sucursal" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-center">Listar Sucursales</Link>
           <Link to="/admin/add/sucursal" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center">Agregar Sucursal</Link>
-          <Link to="/admin/delete/sucursal" className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-center">Eliminar Sucursal</Link>
+
         </div>
         <p className="mb-4">Selecciona una acción para gestionar sucursales.</p>
       </div>

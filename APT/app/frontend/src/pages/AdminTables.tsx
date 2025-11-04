@@ -1,6 +1,7 @@
+// src/pages/AdminTables.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import Layout from "../components/Layout";
 import { get } from "../lib/api";
+import AdminNavBar from "../components/AdminNavBar";
 
 type PatientRow = {
   id: number;
@@ -38,11 +39,16 @@ function usePager<T>(data: T[], pageSize = 10) {
   return { page, setPage, maxPage, view };
 }
 
+// normaliza las respuestas del backend
 function normalizeArray<T = any>(resp: any): T[] {
   if (!resp) return [];
+  // caso paginado típico: { data: { data: [...] } }
   if (resp.data && Array.isArray(resp.data.data)) return resp.data.data;
+  // caso: { data: [...] }
   if (Array.isArray(resp.data)) return resp.data;
+  // caso: [...]
   if (Array.isArray(resp)) return resp;
+  // caso: { items: [...] }
   if (Array.isArray(resp.items)) return resp.items;
   return [];
 }
@@ -61,10 +67,8 @@ export default function AdminTables() {
     // PACIENTES
     get<any>("/api/Patients")
       .then((r) => {
-        console.log("📦 /api/Patients RAW =", r); // <-- AQUÍ VES TODO EN LA CONSOLA
         const raw = normalizeArray<any>(r);
         const mapped: PatientRow[] = raw.map((x: any) => {
-          // intentamos todas las variantes conocidas
           const email =
             x.email ||
             x.mail ||
@@ -82,7 +86,9 @@ export default function AdminTables() {
         });
         setPatients(mapped);
       })
-      .catch(() => {});
+      .catch(() => {
+        // si falla mantenemos vacío
+      });
 
     // DOCTORES
     get<any>("/api/Doctors")
@@ -97,7 +103,9 @@ export default function AdminTables() {
         }));
         setDoctors(mapped);
       })
-      .catch(() => {});
+      .catch(() => {
+        // ignore
+      });
 
     // CITAS
     get<any>("/api/Appointments")
@@ -128,8 +136,12 @@ export default function AdminTables() {
   const aPager = usePager(filterAny(appointments));
 
   return (
-    <Layout>
-      <main className="p-6 max-w-6xl mx-auto">
+    <>
+      {/* barra admin arriba */}
+      <AdminNavBar active="tables" />
+
+      {/* mismo contenedor que el resto */}
+      <main className="max-w-6xl mx-auto px-6 py-6">
         <h1 className="text-2xl font-bold mb-4">Panel administrador</h1>
 
         {error && (
@@ -181,40 +193,31 @@ export default function AdminTables() {
         </div>
 
         {tab === "patients" && (
-          <>
-            <section>
-              <table className="w-full border rounded bg-white">
-                <thead>
-                  <tr>
-                    <th className="text-left p-2">ID</th>
-                    <th className="text-left p-2">Nombre</th>
-                    <th className="text-left p-2">Email</th>
+          <section>
+            <table className="w-full border rounded bg-white">
+              <thead>
+                <tr>
+                  <th className="text-left p-2">ID</th>
+                  <th className="text-left p-2">Nombre</th>
+                  <th className="text-left p-2">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pPager.view.map((p) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="p-2">{p.id}</td>
+                    <td className="p-2">
+                      {p.fullName || p.name || (p as any).nombre || "-"}
+                    </td>
+                    <td className="p-2">
+                      {p.email && p.email !== "" ? p.email : "-"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {pPager.view.map((p) => (
-                    <tr key={p.id} className="border-t">
-                      <td className="p-2">{p.id}</td>
-                      <td className="p-2">
-                        {p.fullName || p.name || p["nombre"] || "-"}
-                      </td>
-                      <td className="p-2">
-                        {p.email && p.email !== "" ? p.email : "-"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <Pager {...pPager} />
-            </section>
-
-            {/* 🔍 DEBUG SOLO PARA VER QUÉ LLEGA */}
-           {/*   <pre className="mt-6 bg-gray-100 p-3 rounded text-xs overflow-auto">
-              {patients[0]
-                ? JSON.stringify(patients[0], null, 2)
-                : "Sin datos de pacientes (aún)."}
-            </pre> */}
-          </>
+                ))}
+              </tbody>
+            </table>
+            <Pager {...pPager} />
+          </section>
         )}
 
         {tab === "doctors" && (
@@ -233,7 +236,7 @@ export default function AdminTables() {
                   <tr key={d.id} className="border-t">
                     <td className="p-2">{d.id}</td>
                     <td className="p-2">
-                      {d.name || d.fullName || d["nombre"] || "-"}
+                      {d.name || d.fullName || (d as any).nombre || "-"}
                     </td>
                     <td className="p-2">{d.specialty || "-"}</td>
                     <td className="p-2">{d.email || "-"}</td>
@@ -279,7 +282,7 @@ export default function AdminTables() {
           </section>
         )}
       </main>
-    </Layout>
+    </>
   );
 }
 

@@ -1,3 +1,4 @@
+// src/pages/AddDoctorPage.tsx
 import AdminNavBar from "../components/AdminNavBar";
 import { useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -5,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { baseURL } from "../lib/api";
 
 interface CreatedDoctor {
-  id: number;
-  userId: number;
+  id: number;        // id del doctor
+  userId: number;    // id del usuario asociado
   name: string;
   specialty: string;
   email: string;
@@ -29,16 +30,14 @@ export default function AddDoctorPage() {
   const [error, setError] = useState("");
   const [created, setCreated] = useState<CreatedDoctor | null>(null);
 
-  const isEmailValid = (value: string) => /^[\w.-]+@[\w-]+\.[A-Za-z]{2,}$/.test(value);
+  const isEmailValid = (value: string) =>
+    /^[\w.-]+@[\w-]+\.[A-Za-z]{2,}$/.test(value);
 
-  const isFormValid = () => {
-    return (
-      name.trim() !== "" &&
-      specialty.trim() !== "" &&
-      email.trim() !== "" &&
-      isEmailValid(email.trim())
-    );
-  };
+  const isFormValid = () =>
+    name.trim() !== "" &&
+    specialty.trim() !== "" &&
+    email.trim() !== "" &&
+    isEmailValid(email.trim());
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +45,7 @@ export default function AddDoctorPage() {
     setError("");
 
     if (!isFormValid()) return;
+
     if (!token) {
       setError("Token no disponible. Por favor inicia sesión de nuevo.");
       return;
@@ -77,15 +77,33 @@ export default function AddDoctorPage() {
       }
 
       const json = await res.json();
-      // La API retorna { data: [ { ...doctor } ], message: '...' }
-      const doc = Array.isArray(json.data) && json.data.length > 0 ? json.data[0] : null;
+
+      // tu API suele mandar { data: [ {...} ], message: "..." }
+      // pero la dejamos tolerante
+      let doc: any = null;
+      if (Array.isArray(json.data) && json.data.length > 0) {
+        doc = json.data[0];
+      } else if (json.data && typeof json.data === "object") {
+        doc = json.data;
+      } else {
+        doc = json;
+      }
+
       if (!doc) {
         setError("Respuesta inesperada del servidor");
         setLoading(false);
         return;
       }
 
-      setCreated(doc as CreatedDoctor);
+      const normalized: CreatedDoctor = {
+        id: doc.id ?? doc.doctorId ?? 0,
+        userId: doc.userId ?? doc.idUser ?? 0,
+        name: doc.name ?? "",
+        specialty: doc.specialty ?? "",
+        email: doc.email ?? "",
+      };
+
+      setCreated(normalized);
     } catch (err) {
       console.error(err);
       setError("Error de red al crear el doctor");
@@ -94,15 +112,19 @@ export default function AddDoctorPage() {
     }
   }
 
+  // ====== VISTA DE ÉXITO ======
   if (created) {
     return (
       <>
-        <AdminNavBar />
+        <AdminNavBar active="doctors" />
         <div className="max-w-2xl mx-auto p-6 mt-8">
           <h1 className="text-2xl font-bold mb-4">Doctor creado con éxito</h1>
-          <div className="border rounded p-4 bg-white shadow">
+          <div className="border rounded p-4 bg-white shadow space-y-1 text-sm">
             <p>
-              <strong>IdDoctor:</strong> {created.userId}
+              <strong>DoctorId (id):</strong> {created.id}
+            </p>
+            <p>
+              <strong>UserId:</strong> {created.userId}
             </p>
             <p>
               <strong>Nombre:</strong> {created.name}
@@ -114,12 +136,24 @@ export default function AddDoctorPage() {
               <strong>Email:</strong> {created.email}
             </p>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 flex gap-3">
             <button
               onClick={() => navigate("/admin/doctors")}
               className="px-4 py-2 rounded bg-blue-600 text-white"
             >
-              Volver a Inicio
+              Volver al listado
+            </button>
+            <button
+              onClick={() => {
+                // permitir crear otro
+                setCreated(null);
+                setName("");
+                setEmail("");
+                setSpecialty("Medicina General");
+              }}
+              className="px-4 py-2 rounded border"
+            >
+              Crear otro
             </button>
           </div>
         </div>
@@ -127,13 +161,21 @@ export default function AddDoctorPage() {
     );
   }
 
+  // ====== FORM ======
   return (
     <>
-      <AdminNavBar />
+      <AdminNavBar active="doctors" />
       <div className="max-w-2xl mx-auto p-6 mt-8">
         <h1 className="text-2xl font-bold mb-4">Agregar Doctor</h1>
-        <form onSubmit={handleSubmit} className="space-y-4 bg-white p-4 rounded shadow">
-          {error && <div className="text-red-600">{error}</div>}
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 bg-white p-4 rounded shadow"
+        >
+          {error && (
+            <div className="text-red-600 text-sm border border-red-200 bg-red-50 px-3 py-2 rounded">
+              {error}
+            </div>
+          )}
 
           <div>
             <label className="block font-medium mb-1">Nombre</label>
@@ -145,7 +187,9 @@ export default function AddDoctorPage() {
               className="border rounded px-2 py-1 w-full"
             />
             {touched.name && name.trim() === "" && (
-              <div className="text-red-600 text-sm mt-1">El nombre es necesario</div>
+              <div className="text-red-600 text-sm mt-1">
+                El nombre es necesario
+              </div>
             )}
           </div>
 
@@ -164,7 +208,9 @@ export default function AddDoctorPage() {
               <option>Kinesiología</option>
             </select>
             {touched.specialty && specialty.trim() === "" && (
-              <div className="text-red-600 text-sm mt-1">La especialidad es necesaria</div>
+              <div className="text-red-600 text-sm mt-1">
+                La especialidad es necesaria
+              </div>
             )}
           </div>
 
@@ -178,11 +224,15 @@ export default function AddDoctorPage() {
               className="border rounded px-2 py-1 w-full"
             />
             {touched.email && email.trim() === "" && (
-              <div className="text-red-600 text-sm mt-1">El email es necesario</div>
+              <div className="text-red-600 text-sm mt-1">
+                El email es necesario
+              </div>
             )}
-            {touched.email && email.trim() !== "" && !isEmailValid(email.trim()) && (
-              <div className="text-red-600 text-sm mt-1">Email inválido</div>
-            )}
+            {touched.email &&
+              email.trim() !== "" &&
+              !isEmailValid(email.trim()) && (
+                <div className="text-red-600 text-sm mt-1">Email inválido</div>
+              )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -190,7 +240,9 @@ export default function AddDoctorPage() {
               type="submit"
               disabled={!isFormValid() || loading}
               className={`px-4 py-2 rounded text-white ${
-                !isFormValid() || loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600"
+                !isFormValid() || loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600"
               }`}
             >
               {loading ? "Enviando..." : "Confirmar Datos"}

@@ -16,7 +16,6 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
     async function fetchAppointments() {
       setLoading(true);
       setError(null);
-      console.log("DoctorCalendar API id enviado:", doctorId);
 
       try {
         const headers: Record<string, string> = {
@@ -37,17 +36,14 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
 
         const data = await res.json();
 
-        // El backend tuyo manda algo como:
-        // { data: { appointmentsNotAvalable: [...], appointmentsAvailable: [...] } }
+        // backend: { data: { appointmentsNotAvalable: [...], appointmentsAvailable: [...] } }
         const notAvail =
-          data?.data?.appointmentsNotAvalable && Array.isArray(data.data.appointmentsNotAvalable)
+          data?.data?.appointmentsNotAvalable &&
+          Array.isArray(data.data.appointmentsNotAvalable)
             ? data.data.appointmentsNotAvalable
             : [];
 
         setAppointments(notAvail);
-        if (!notAvail.length) {
-          setError("No hay citas no disponibles para esta fecha.");
-        }
       } catch (err: any) {
         setError(err.message || "Error al cargar citas");
         setAppointments([]);
@@ -71,11 +67,14 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const res = await fetch(`${baseURL}/api/Appointments/${appointmentId}/status`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ status: 2 }),
-      });
+      const res = await fetch(
+        `${baseURL}/api/Appointments/${appointmentId}/status`,
+        {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ status: 2 }),
+        }
+      );
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
@@ -91,7 +90,7 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
     }
   }
 
-  // deduplicar por appointmentID (tú ya lo hacías)
+  // deduplicar por appointmentID
   const uniqueAppointments = [
     ...new Map(appointments.map((a) => [a.appointmentID, a])).values(),
   ];
@@ -111,12 +110,12 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
         </label>
       </div>
 
-      {loading ? <div>Cargando citas...</div> : null}
-      {error ? <div className="text-red-600">{error}</div> : null}
+      {loading && <div>Cargando citas...</div>}
+      {error && <div className="text-red-600">{error}</div>}
 
       <ul className="divide-y">
-        {uniqueAppointments.length === 0 && !loading ? (
-          <li>No hay citas para esta fecha.</li>
+        {!loading && !error && uniqueAppointments.length === 0 ? (
+          <li className="py-2 text-gray-500">No hay citas para esta fecha.</li>
         ) : null}
 
         {uniqueAppointments.map((appt) => (
@@ -128,10 +127,14 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
               <strong>
                 {(() => {
                   try {
-                    // Muestra la hora que llega sin cambiar zona
-                    const utcDate = new Date(appt.hour);
-                    return utcDate.toISOString().slice(11, 16);
+                    // si viene algo tipo "2025-11-02T15:00:00Z"
+                    const d = new Date(appt.hour);
+                    return d.toLocaleTimeString("es-CL", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
                   } catch {
+                    // si viene solo "15:00"
                     return appt.hour;
                   }
                 })()}

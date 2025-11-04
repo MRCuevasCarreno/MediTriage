@@ -1,6 +1,5 @@
 // src/pages/Register.tsx
 import React, { useState } from "react";
-import Layout from "../components/Layout";
 import Card from "../components/ui/Card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -55,7 +54,7 @@ export default function Register() {
   }
 
   return (
-    <Layout>
+
       <div className="max-w-lg mx-auto">
         <Card title="Crear cuenta">
           <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
@@ -120,6 +119,5 @@ export default function Register() {
           </form>
         </Card>
       </div>
-    </Layout>
   );
 }

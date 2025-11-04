@@ -1,5 +1,5 @@
+// src/pages/Triage.tsx
 import React, { useState } from "react";
-import Layout from "../components/Layout";
 import Card from "../components/ui/Card";
 import { baseURL } from "../lib/api";
 
@@ -39,8 +39,6 @@ export default function Triage() {
       }
 
       const api = await res.json();
-
-      // puede venir como { data: { level, specialist, redFlag } } o directo
       const data = api.data || api;
 
       setResult({
@@ -54,7 +52,7 @@ export default function Triage() {
   }
 
   return (
-    <Layout>
+    <div className="max-w-6xl mx-auto px-6 py-6">
       <div className="max-w-2xl mx-auto">
         <Card title="Triage orientativo">
           <div className="grid grid-cols-2 gap-4">
@@ -63,7 +61,9 @@ export default function Triage() {
               <input
                 className="w-full rounded-xl border px-3 py-2"
                 value={answers.age}
-                onChange={(e) => setAnswers({ ...answers, age: e.target.value })}
+                onChange={(e) =>
+                  setAnswers({ ...answers, age: e.target.value })
+                }
               />
             </div>
             <div className="flex items-end gap-2">
@@ -71,7 +71,9 @@ export default function Triage() {
                 id="fever"
                 type="checkbox"
                 checked={answers.fever}
-                onChange={(e) => setAnswers({ ...answers, fever: e.target.checked })}
+                onChange={(e) =>
+                  setAnswers({ ...answers, fever: e.target.checked })
+                }
               />
               <label htmlFor="fever" className="text-sm">
                 Fiebre
@@ -85,7 +87,10 @@ export default function Triage() {
                 max={10}
                 value={answers.painLevel}
                 onChange={(e) =>
-                  setAnswers({ ...answers, painLevel: Number(e.target.value) })
+                  setAnswers({
+                    ...answers,
+                    painLevel: Number(e.target.value),
+                  })
                 }
                 className="w-full"
               />
@@ -95,7 +100,9 @@ export default function Triage() {
               <textarea
                 className="w-full rounded-xl border px-3 py-2 min-h-[100px]"
                 value={answers.notes}
-                onChange={(e) => setAnswers({ ...answers, notes: e.target.value })}
+                onChange={(e) =>
+                  setAnswers({ ...answers, notes: e.target.value })
+                }
               />
             </div>
             <div className="col-span-2 flex justify-end">
@@ -118,13 +125,15 @@ export default function Triage() {
                 </p>
                 <p>
                   <b>Banderas rojas:</b>{" "}
-                  {result.redFlags.length ? result.redFlags.join(", ") : "Ninguna"}
+                  {result.redFlags.length
+                    ? result.redFlags.join(", ")
+                    : "Ninguna"}
                 </p>
               </div>
             </Card>
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }
