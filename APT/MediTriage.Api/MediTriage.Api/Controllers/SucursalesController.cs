@@ -19,11 +19,30 @@ public class SucursalesController : ControllerBase
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Get()
+    public async Task<ActionResult> Get(
+        [FromQuery] string? especialidad,
+        [FromQuery] string? nombre,
+        [FromQuery] string? comuna
+    )
     {
-        var sucursales = await _db.Sucursales
+        var query = _db.Sucursales
             .Include(s => s.Doctors)
                 .ThenInclude(d => d.User)
+            .AsQueryable();
+
+        // Filtrar por nombre
+        if (!string.IsNullOrWhiteSpace(nombre))
+            query = query.Where(s => s.Nombre.Contains(nombre));
+
+        // Filtrar por comuna
+        if (!string.IsNullOrWhiteSpace(comuna))
+            query = query.Where(s => s.Comuna.Contains(comuna));
+
+        // Filtrar por especialidad de los doctores
+        if (!string.IsNullOrWhiteSpace(especialidad))
+            query = query.Where(s => s.Doctors.Any(d => d.Specialty.Contains(especialidad)));
+
+        var sucursales = await query
             .Select(s => new SucursalDto
             {
                 Id = s.Id,

@@ -47,6 +47,13 @@ namespace MediTriage.Api.Controllers
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
+            if (user.Role == UserRole.Patient)
+            {
+                var patient = new Patient { UserId = user.Id };
+                _db.Patients.Add(patient);
+                await _db.SaveChangesAsync();
+            }
+
             var (token, exp) = _tokens.CreateToken(user);
 
             return Ok(new AuthResponse

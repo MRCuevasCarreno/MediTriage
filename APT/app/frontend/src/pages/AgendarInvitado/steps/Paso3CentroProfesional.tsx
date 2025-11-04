@@ -18,23 +18,44 @@ export default function Paso3CentroProfesional({
   const [centers, setCenters] = useState<Center[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [query, setQuery] = useState("");
+  const [comunaFilter, setComunaFilter] = useState<string>('');
+  const [especialidadFilter, setEspecialidadFilter] = useState<string>('');
+  const [availableComunas, setAvailableComunas] = useState<string[]>([]);
+  const [availableEspecialidades] = useState<Array<{ id: string; label: string; apiName: string }>>([
+    { id: 'all', label: 'Todas', apiName: '' },
+    { id: 'med-gen', label: 'Medicina General', apiName: 'Medicina' },
+    { id: 'derm', label: 'Dermatología', apiName: 'Dermatología' },
+    { id: 'cardio', label: 'Cardiología', apiName: 'Cardiología' },
+    { id: 'pedi', label: 'Pediatría', apiName: 'Pediatría' },
+    { id: 'kine', label: 'Kinesiología', apiName: 'Kinesiología' },
+    { id: 'tele', label: 'Telemedicina', apiName: 'Telemedicina' },
+  ]);
   const [loading, setLoading] = useState(false);
   const [selectedCenter, setSelectedCenter] = useState<string | null>(null);
   const [selectedProfessional, setSelectedProfessional] = useState<string | null>(null);
 
-  // Obtener especialidad seleccionada (tú ya lo usabas así)
-  const servicioId = (window as any).wizardData?.servicioId || "med-gen";
+  // Obtener especialidad seleccionada desde el wizard (si viene del triage)
+  const initialServicioId = (window as any).wizardData?.servicioId || "";
 
-  // Cargar centros y profesionales desde API
+  // Función para construir la URL de fetch con filtros
+  const buildSucursalesUrl = (especialidadApiName?: string, comuna?: string) => {
+    const base = 'https://localhost:7290/api/Sucursales';
+    const params = new URLSearchParams();
+    if (especialidadApiName) params.set('especialidad', especialidadApiName);
+    if (comuna) params.set('comuna', comuna);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  };
+
+  // Cargar centros y profesionales desde API (dependiente de filtros)
   useEffect(() => {
     setLoading(true);
-
-    fetch(`${baseURL}/api/Sucursales`, {
+    fetch("https://localhost:7290/api/Sucursales", {
       headers: {
-        accept: "application/json, text/plain, */*",
-        // si en algún momento tu endpoint pide token, aquí se puede leer de localStorage:
-        // Authorization: `Bearer ${localStorage.getItem("authToken") ?? ""}`,
-      },
+        accept: "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
+      }
     })
       .then(async (res) => {
         if (!res.ok) throw new Error("Error API");
@@ -48,53 +69,34 @@ export default function Paso3CentroProfesional({
             city: c.comuna,
             address: c.direccion,
           }));
+          if (!isMounted) return;
           setCenters(apiCenters);
-
-          // mapear doctores de cada sucursal -> professionals
-          const apiProfessionals: Professional[] = json.data.flatMap((c: any) =>
+          // Mapear doctores a Professional[]
+          const apiProfessionals = json.data.flatMap((c: any) =>
             (c.doctors || []).map((d: any) => ({
               id: String(d.id),
               name: d.user?.name || d.name,
               centerId: String(c.id),
               services: [
-                d.specialty === "Medicina General"
-                  ? "med-gen"
-                  : d.specialty === "Dermatología"
-                  ? "derm"
-                  : d.specialty === "Cardiología"
-                  ? "cardio"
-                  : d.specialty === "Pediatría"
-                  ? "pedi"
-                  : d.specialty === "Kinesiología"
-                  ? "kine"
-                  : d.specialty === "Telemedicina"
-                  ? "tele"
-                  : d.specialty?.toLowerCase() || "",
-              ],
+                d.specialty === "Medicina General" ? "med-gen" :
+                d.specialty === "Dermatología" ? "derm" :
+                d.specialty === "Cardiología" ? "cardio" :
+                d.specialty === "Pediatría" ? "pedi" :
+                d.specialty === "Kinesiología" ? "kine" :
+                d.specialty === "Telemedicina" ? "tele" :
+                d.specialty?.toLowerCase() || ""
+              ]
             }))
           );
           setProfessionals(apiProfessionals);
-        } else if (Array.isArray(json)) {
-          // por si tu API devuelve un array directo
-          const apiCenters: Center[] = json.map((c: any) => ({
-            id: String(c.id),
-            name: c.nombre,
-            city: c.comuna,
-            address: c.direccion,
-          }));
-          setCenters(apiCenters);
         }
       })
-      .catch((err) => {
-        console.error("Error cargando sucursales:", err);
-        // no lo mostramos tan agresivo porque es un paso de agendamiento público
-        // setError("No se pudieron cargar los centros.");
-      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   // Filtrar profesionales por especialidad
-  const prosForService = professionals.filter((p) => p.services.includes(servicioId));
+  const prosForService = professionals.filter(p => p.services.includes(servicioId));
 
   // Solo mostrar centros que tengan al menos un doctor con la especialidad seleccionada
   let centersOffering = centers.filter((center) => {
@@ -130,7 +132,7 @@ export default function Paso3CentroProfesional({
         className="w-full rounded-xl border px-3 py-2 mb-4"
         placeholder="Buscar centro, ciudad o dirección..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={e => setQuery(e.target.value)}
       />
       {loading ? (
         <div className="text-gray-500">Cargando centros y profesionales...</div>

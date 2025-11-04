@@ -128,8 +128,9 @@ public class AppointmentsController : ControllerBase
             DoctorId = request.DoctorId,
             Start = request.Start,
             End = request.End,
-            TriageLevel = triage,
-            TriageNotes = request.TriageNotes,
+            Rut = request.Rut, // Nuevo campo
+            TriageLevel = triage, // Validado como antes
+            TriageNotes = request.TriageNotes, // Nuevo campo
             Status = AppointmentStatus.Scheduled
         };
 
@@ -256,6 +257,7 @@ public class AppointmentsController : ControllerBase
             DoctorId = request.DoctorId,
             Start = request.Start,
             End = request.End,
+            Rut = request.Rut, // Nuevo campo
             TriageLevel = request.TriageLevel,
             TriageNotes = request.TriageNotes,
             Status = AppointmentStatus.Scheduled
@@ -428,6 +430,7 @@ public class AppointmentsController : ControllerBase
         DoctorName = a.Doctor.User.Name,
         Start = a.Start,
         End = a.End,
+        Rut = a.Rut, // Nuevo campo
         TriageLevel = a.TriageLevel,
         TriageNotes = a.TriageNotes
     };
