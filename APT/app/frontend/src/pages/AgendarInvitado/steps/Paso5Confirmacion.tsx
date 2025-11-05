@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../auth/AuthContext";
 import { formatRut } from "../../../Utils/rut";
 import { baseURL } from "../../../lib/api";
 
@@ -10,6 +11,7 @@ export default function Paso5Confirmacion({
   data: any;
   onBack: () => void;
 }) {
+  const auth = useAuth();
   const navigate = useNavigate();
   const [apiError, setApiError] = React.useState<string>("");
   const [email, setEmail] = React.useState("");
@@ -25,6 +27,18 @@ export default function Paso5Confirmacion({
     else if (email && !validateEmail(email)) setEmailError("Formato de email inválido");
     else setEmailError("");
   }, [email, emailTouched]);
+
+  // Si el usuario está logueado, prefijar el email y deshabilitar el input
+  React.useEffect(() => {
+    try {
+      const loggedEmail = (auth && auth.user && (auth.user.email as string)) || "";
+      if (loggedEmail) {
+        setEmail(loggedEmail);
+        // Marcar como touched para que la validación no muestre el error de "requerido"
+        setEmailTouched(true);
+      }
+    } catch (e) {}
+  }, [auth && auth.user && auth.user.email]);
 
   // Diccionario de especialidades
   const especialidades = {
@@ -67,6 +81,22 @@ export default function Paso5Confirmacion({
     return `${d}-${m}-${y} a las ${hora}hrs`;
   }
 
+  // Normalizar triage level para asegurar LOW | MEDIUM | HIGH
+  function normalizeTriageLevel(val: any) {
+    if (val === null || val === undefined) return "MEDIUM";
+    const s = String(val).trim().toLowerCase();
+    // soportar números 1|2|3
+    if (s === "1") return "LOW";
+    if (s === "2") return "MEDIUM";
+    if (s === "3") return "HIGH";
+    // soportar palabras en inglés/español
+    if (s.includes("high") || s.includes("alto") || s.includes("alta")) return "HIGH";
+    if (s.includes("medium") || s.includes("medio") || s.includes("media")) return "MEDIUM";
+    if (s.includes("low") || s.includes("bajo") || s.includes("baja")) return "LOW";
+    // fallback
+    return "MEDIUM";
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
       <h2 className="text-xl font-semibold mb-4">Confirmación de reserva</h2>
@@ -104,6 +134,7 @@ export default function Paso5Confirmacion({
           placeholder="Ingrese su mail para recibir su comprobante de reserva"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={!!(auth && auth.user && auth.user.email)}
           onBlur={() => setEmailTouched(true)}
         />
         {emailError && <div className="text-red-600 text-xs mt-1">{emailError}</div>}
@@ -120,7 +151,9 @@ export default function Paso5Confirmacion({
             setApiError("");
 
             // Preparar datos para API
-            const fullName = data.patient?.name || "Paciente Invitado";
+            // Preferir el nombre del usuario logueado (si existe), luego el paciente en wizard, y por último un fallback
+            const loggedName = auth?.user?.fullName || (auth?.user as any)?.name;
+            const fullName = loggedName || data.patient?.name || "Paciente Invitado";
             const doctorId = data.profesionalId;
 
             // Formato: YYYY-MM-DDTHH:mm:ss
@@ -147,32 +180,76 @@ export default function Paso5Confirmacion({
               start = format(dStart);
             }
 
-            const payload = {
+            const patientRut = data?.rut || data?.patient?.rut || "";
+
+            const payload: any = {
               fullName,
               email,
               doctorId,
               start,
               end,
-              triageLevel: "MEDIUM",
-              triageNotes: "Dolor leve",
+              rut: patientRut,
             };
+
+            // Si estamos autenticados, intentar obtener el patientId real desde /api/Patients/me
+            try {
+              const tokenForMe = auth?.token || localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+              if (tokenForMe) {
+                const meRes = await fetch(`${baseURL}/api/Patients/me`, {
+                  method: "GET",
+                  headers: {
+                    accept: "application/json, text/plain, */*",
+                    Authorization: `Bearer ${tokenForMe}`,
+                  },
+                });
+                if (meRes.ok) {
+                  const meJson = await meRes.json();
+                  // API devuelve { data: { id, name, email }, message }
+                  const pid = meJson?.data?.id ?? auth?.user?.id ?? null;
+                  if (pid) payload.patientId = Number(pid);
+                } else {
+                  // fallback a auth.user.id si /Patients/me falla
+                  const pid = auth?.user?.id ?? (localStorage.getItem("me_id") || null);
+                  if (pid) payload.patientId = Number(pid);
+                }
+              } else {
+                const pid = auth?.user?.id ?? (localStorage.getItem("me_id") || null);
+                if (pid) payload.patientId = Number(pid);
+              }
+            } catch (e) {
+              try {
+                const pid = auth?.user?.id ?? (localStorage.getItem("me_id") || null);
+                if (pid) payload.patientId = Number(pid);
+              } catch {}
+            }
+
+            // Añadir triage normalizado y notas
+            try {
+              const dl = (data && (data.triageLevel as string)) || localStorage.getItem("triage_level");
+              payload.triageLevel = normalizeTriageLevel(dl);
+              const dn = (data && (data.triageNotes as string)) || localStorage.getItem("triage_notes");
+              payload.triageNotes = dn || "";
+            } catch (e) {
+              payload.triageLevel = normalizeTriageLevel(null);
+              payload.triageNotes = "";
+            }
 
             try {
               console.log("API Request:", payload);
 
               // intentar leer token
-              const token =
-                localStorage.getItem("authToken") || localStorage.getItem("token") || "";
+              // Si el usuario está autenticado (token presente), usar el endpoint protegido /api/Appointments
+              const token = auth?.token || localStorage.getItem("token") || localStorage.getItem("authToken") || "";
 
               const headers: Record<string, string> = {
                 accept: "application/json, text/plain, */*",
                 "Content-Type": "application/json",
               };
-              if (token) {
-                headers.Authorization = `Bearer ${token}`;
-              }
+              if (token) headers.Authorization = `Bearer ${token}`;
 
-              const response = await fetch(`${baseURL}/api/Appointments/public`, {
+              const endpoint = token ? `${baseURL}/api/Appointments` : `${baseURL}/api/Appointments/public`;
+
+              const response = await fetch(endpoint, {
                 method: "POST",
                 headers,
                 body: JSON.stringify(payload),

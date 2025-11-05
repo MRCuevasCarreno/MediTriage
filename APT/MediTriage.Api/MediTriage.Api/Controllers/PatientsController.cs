@@ -19,30 +19,26 @@ namespace MediTriage.Api.Controllers
         // 🔸 1) Paciente se ve a sí mismo
         [HttpGet("me")]
         [Authorize(Roles = "Patient")]
-        public async Task<ActionResult> GetMyPatient()
+        public async Task<IActionResult> GetMyPatient()
         {
-            var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-                   ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdStr = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+                         ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-            if (!int.TryParse(sub, out var userId))
-                return StatusCode(StatusCodes.Status401Unauthorized,
-                    new ErrorResponse("Unauthorized", "Usuario no válido."));
+            if (!int.TryParse(userIdStr, out var userId))
+                return Unauthorized(new { error = "Usuario no válido" });
 
-            var dto = await _db.Patients
-                .Include(p => p.User)
-                .Where(p => p.UserId == userId)
-                .Select(p => new PatientListDto
-                {
-                    Id = p.Id,
-                    Name = p.User.Name,
-                    Email = p.User.Email    // 👈 ahora sí lo mandamos
-                })
-                .FirstOrDefaultAsync();
+            var patient = await _db.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (patient == null)
+                return NotFound(new { error = "Paciente no encontrado" });
 
-            return dto is null
-                ? StatusCode(StatusCodes.Status404NotFound,
-                    new ErrorResponse("NotFound", "Paciente no encontrado."))
-                : Ok(new SuccessResponse<PatientListDto>(dto, "Paciente actual."));
+            var response = new
+            {
+                userId = userId,
+                patientId = patient.Id
+                // Puedes agregar más datos si lo necesitas
+            };
+
+            return Ok(response);
         }
 
         // 🔸 2) Listado paginado (solo doctor/admin)

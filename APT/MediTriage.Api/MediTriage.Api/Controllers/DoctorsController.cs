@@ -172,7 +172,18 @@ public class DoctorsController : ControllerBase
             Name = doctor.User.Name,
             Specialty = doctor.Specialty,
             AppointmentsAvailable = slots.Where(s => s.Status).ToList(),
-            AppointmentsNotAvalable = notAvailable
+            AppointmentsNotAvalable = appointments
+    .Where(a => a.Status == AppointmentStatus.Scheduled)
+    .Select(a => new DoctorCalendarAppointmentDto
+    {
+        AppointmentID = a.Id,
+        Hour = a.Start,
+        Status = false,
+        Rut = a.Rut,
+        TriageLevel = a.TriageLevel,
+        TriageNotes = a.TriageNotes
+    })
+    .ToList()
         };
 
         return Ok(new { data = response, message = "Citas encontradas." });

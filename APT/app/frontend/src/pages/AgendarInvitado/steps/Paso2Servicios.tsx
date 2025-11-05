@@ -19,6 +19,15 @@ export default function Paso2Servicios({ onNext, onBack }: { onNext: (data: { se
   const [aiAlert, setAiAlert] = React.useState<string | null>(null);
   const [aiResult, setAiResult] = React.useState<{ level: string; specialist: string; redFlag: boolean } | null>(null);
 
+  function mapLevelToApi(level: string) {
+    if (!level) return 'MEDIUM';
+    const s = level.toLowerCase();
+    if (s.includes('alto') || s.includes('high')) return 'HIGH';
+    if (s.includes('bajo') || s.includes('low')) return 'LOW';
+    if (s.includes('medio') || s.includes('medium')) return 'MEDIUM';
+    return 'MEDIUM';
+  }
+
   const canProceed = Boolean(selected) || (edad !== "" && notas.trim() !== "" && dolor >= 1 && dolor <= 10);
   return (
     <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
@@ -106,13 +115,24 @@ export default function Paso2Servicios({ onNext, onBack }: { onNext: (data: { se
                   if (redFlag) {
                     setAiAlert('¡Alerta!: Resultado indicaría una situación seria. Diríjase a urgencias lo antes posible.');
                   } else {
-                    // guardar en localStorage
+                    // Normalizar nivel al formato esperado por la API y guardar en localStorage + wizardData
+                    const mapped = mapLevelToApi(level || '');
                     try {
-                      localStorage.setItem('triage_level', level);
-                      localStorage.setItem('triage_specialist', specialist);
+                      localStorage.setItem('triage_level', mapped);
+                      localStorage.setItem('triage_specialist', specialist || '');
+                      localStorage.setItem('triage_notes', notas || '');
                     } catch (e) {
                       // ignore
                     }
+                    try {
+                      const wd = (window as any).wizardData || {};
+                      wd.triageLevel = mapped;
+                      wd.triageNotes = notas || '';
+                      wd.triageAge = typeof edad === 'number' ? edad : (edad === '' ? null : Number(edad));
+                      wd.triagePain = dolor;
+                      wd.triageFever = fiebre;
+                      (window as any).wizardData = wd;
+                    } catch {}
                   }
                 } catch (err: any) {
                   setAiAlert('Error al consultar la IA: ' + (err?.message || err));
@@ -150,11 +170,17 @@ export default function Paso2Servicios({ onNext, onBack }: { onNext: (data: { se
                       else if (spec.includes('tele')) servicioMap = 'tele';
 
                       // save in wizardData and advance to next step (Centro/Profesional)
-                      const wizardData = (window as any).wizardData || {};
-                      wizardData.servicioId = servicioMap;
-                      (window as any).wizardData = wizardData;
-                      // use onNext to advance step in Wizard and pass servicioId
-                      onNext({ servicioId: servicioMap });
+                        const wizardData = (window as any).wizardData || {};
+                        wizardData.servicioId = servicioMap;
+                        // ensure triage data saved
+                        wizardData.triageLevel = wizardData.triageLevel || localStorage.getItem('triage_level') || mapLevelToApi(aiResult?.level || '');
+                        wizardData.triageNotes = wizardData.triageNotes || localStorage.getItem('triage_notes') || notas || '';
+                        wizardData.triageAge = wizardData.triageAge || (typeof edad === 'number' ? edad : (edad === '' ? null : Number(edad)));
+                        wizardData.triagePain = wizardData.triagePain || dolor;
+                        wizardData.triageFever = wizardData.triageFever || fiebre;
+                        (window as any).wizardData = wizardData;
+                        // use onNext to advance step in Wizard and pass servicioId
+                        onNext({ servicioId: servicioMap });
                     }}
                   >Ver sucursales disponibles</button>
                 </div>
@@ -187,7 +213,20 @@ export default function Paso2Servicios({ onNext, onBack }: { onNext: (data: { se
         <button
           className={`rounded-xl px-5 py-2 ${canProceed ? 'bg-black text-white' : 'bg-gray-200 text-gray-500'}`}
           disabled={!canProceed}
-          onClick={() => canProceed && onNext({ servicioId: selected || '' })}
+          onClick={() => {
+            if (!canProceed) return;
+            // persist triage data to wizardData before advancing
+            try {
+              const wizardData = (window as any).wizardData || {};
+              wizardData.triageLevel = wizardData.triageLevel || localStorage.getItem('triage_level') || mapLevelToApi(aiResult?.level || '');
+              wizardData.triageNotes = wizardData.triageNotes || localStorage.getItem('triage_notes') || notas || '';
+              wizardData.triageAge = wizardData.triageAge || (typeof edad === 'number' ? edad : (edad === '' ? null : Number(edad)));
+              wizardData.triagePain = wizardData.triagePain || dolor;
+              wizardData.triageFever = wizardData.triageFever || fiebre;
+              (window as any).wizardData = wizardData;
+            } catch {}
+            onNext({ servicioId: selected || '' });
+          }}
         >Siguiente</button>
       </div>
 

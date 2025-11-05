@@ -1,5 +1,5 @@
 // src/pages/AgendarInvitado/steps/Paso3CentroProfesional.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { baseURL } from "../../../lib/api";
 import { useAuth } from "../../../auth/AuthContext";
 

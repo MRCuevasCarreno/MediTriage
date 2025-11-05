@@ -3,43 +3,46 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediTriage.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using MediTriage.Api.Models;
 
 namespace MediTriage.Api.Controllers;
 
 [ApiController]
-[Route("api/me")]
+[Route("api/[controller]")]
 public class MeController : ControllerBase
 {
     private readonly AppDbContext _db;
 
-    public MeController(AppDbContext db)
-    {
-        _db = db;
-    }
+    public MeController(AppDbContext db) => _db = db;
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult> Get()
+    public async Task<IActionResult> Get()
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                    ?? User.FindFirstValue(ClaimTypes.Name)
-                    ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userIdStr = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+                     ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        int.TryParse(userIdStr, out var userId);
+        if (!int.TryParse(userIdStr, out var userId))
+            return Unauthorized(new { error = "Usuario no válido" });
 
-        // doctorId como int? para permitir null
-        int? doctorId = await _db.Doctors
-            .Where(d => d.UserId == userId)
-            .Select(d => (int?)d.Id) // <-- casteo explícito a int?
-            .FirstOrDefaultAsync();
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return Unauthorized(new { error = "Usuario no encontrado" });
 
-        return Ok(new
+        var response = new
         {
-            id = userIdStr,
-            doctorId, // Si no existe, será null
-            email = User.FindFirstValue(ClaimTypes.Email),
-            name = User.FindFirstValue(ClaimTypes.Name),
-            role = User.FindFirstValue(ClaimTypes.Role)
-        });
+            id = user.Id,
+            email = user.Email,
+            name = user.Name,
+            role = user.Role.ToString(),
+            patientId = user.Role == UserRole.Patient
+                ? await _db.Patients
+                    .Where(p => p.Id == user.Id)
+                    .Select(p => (int?)p.Id)
+                    .FirstOrDefaultAsync()
+                : null
+        };
+
+        return Ok(response);
     }
 }

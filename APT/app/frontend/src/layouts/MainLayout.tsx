@@ -1,5 +1,5 @@
 // src/layouts/MainLayout.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import Container from "../components/ui/Container";
 import { useAuth, type Role } from "../auth/AuthContext";
@@ -28,6 +28,7 @@ function Navbar() {
       .map((s) => s?.[0]?.toUpperCase() ?? "")
       .join("") || "U";
   const role = (user?.role ?? "patient") as Role;
+  const isDoctor = role === 'doctor';
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -46,12 +47,16 @@ function Navbar() {
           </Link>
 
           <nav className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-10 text-sm">
-            <NavLink end to="/" className={linkCls}>Inicio</NavLink>
-            <NavLink to="/agendar-invitado" className={linkCls}>Agendar</NavLink>
-            <NavLink to="/triage" className={linkCls}>Triage</NavLink>
-            {user && <NavLink to="/appointments" className={linkCls}>Mis citas</NavLink>}
-            {user?.role === "doctor" && <NavLink to="/doctor" className={linkCls}>Médico</NavLink>}
-            {user?.role === "admin" && <NavLink to="/admin" className={linkCls}>Admin</NavLink>}
+            {!isDoctor ? (
+              <>
+                <NavLink end to="/" className={linkCls}>Inicio</NavLink>
+                <NavLink to="/agendar-invitado" className={linkCls}>Agendar</NavLink>
+                <NavLink to="/triage" className={linkCls}>Triage</NavLink>
+                {user?.role === "admin" && <NavLink to="/admin" className={linkCls}>Admin</NavLink>}
+              </>
+            ) : (
+              <NavLink to="/doctor" className={linkCls}>Dashboard Médico</NavLink>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
@@ -85,12 +90,19 @@ function Navbar() {
 
         {open && (
           <div className="md:hidden pb-3 flex flex-col gap-2 text-sm">
-            <NavLink end to="/" className={linkCls} onClick={() => setOpen(false)}>Inicio</NavLink>
-            <NavLink to="/agendar-invitado" className={linkCls} onClick={() => setOpen(false)}>Agendar</NavLink>
-            <NavLink to="/triage" className={linkCls} onClick={() => setOpen(false)}>Triage</NavLink>
-            {user && <NavLink to="/appointments" className={linkCls} onClick={() => setOpen(false)}>Mis citas</NavLink>}
-            {user?.role === "doctor" && <NavLink to="/doctor" className={linkCls} onClick={() => setOpen(false)}>Médico</NavLink>}
-            {user?.role === "admin" && <NavLink to="/admin" className={linkCls} onClick={() => setOpen(false)}>Admin</NavLink>}
+            {!isDoctor ? (
+              <>
+                <NavLink end to="/" className={linkCls} onClick={() => setOpen(false)}>Inicio</NavLink>
+                <NavLink to="/agendar-invitado" className={linkCls} onClick={() => setOpen(false)}>Agendar</NavLink>
+                <NavLink to="/triage" className={linkCls} onClick={() => setOpen(false)}>Triage</NavLink>
+                {user && <NavLink to="/appointments" className={linkCls} onClick={() => setOpen(false)}>Mis citas</NavLink>}
+                {user?.role === "admin" && <NavLink to="/admin" className={linkCls} onClick={() => setOpen(false)}>Admin</NavLink>}
+              </>
+            ) : (
+              <>
+                <NavLink to="/doctor" className={linkCls} onClick={() => setOpen(false)}>Dashboard Médico</NavLink>
+              </>
+            )}
             {!user ? (
               <>
                 <NavLink to="/login" className={linkCls} onClick={() => setOpen(false)}>Entrar</NavLink>
@@ -116,7 +128,7 @@ export default function MainLayout() {
         </Container>
       </main>
       <footer className="mt-8 border-t">
-        <Container>{/* footer */}</Container>
+        <Container><div /></Container>
       </footer>
     </div>
   );

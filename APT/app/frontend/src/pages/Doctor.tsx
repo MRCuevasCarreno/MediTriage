@@ -1,43 +1,57 @@
-import React, { useEffect, useState } from "react";
-import Card from "../components/ui/Card";
-import Badge from "../components/Badge";
+ 
+import { useAuth } from "../auth/AuthContext";
+import { DoctorCalendar } from "../components/DoctorCalendar";
+import { useEffect, useState } from "react";
+import { baseURL } from "../lib/api";
 
 export default function Doctor() {
-  const [today, setToday] = useState<any[]>([]);
+  const { user, token } = useAuth();
+  const [doctorId, setDoctorId] = useState<number>(() => Number(user?.doctorId ?? user?.id ?? 0) || 0);
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
-    (async () => {
-      try {
-        // const res = await api.doctorAppointments();
-        const res = [
-          { id: 11, patient: "Juan Pérez", time: "09:00", reason: "Dolor abdominal", triage: "No urgente" },
-          { id: 12, patient: "Ana Díaz", time: "09:30", reason: "Fiebre y tos", triage: "Prioritario" },
-        ];
-        setToday(res);
-      } catch (err) { console.error(err); }
-    })();
-  }, []);
-  return (
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card title="Agenda de hoy">
-          <ul className="space-y-2 text-sm">
-            {today.map(x => (
-              <li key={x.id} className="border rounded-xl px-3 py-2 flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{x.time} – {x.patient}</p>
-                  <p className="text-gray-600">{x.reason}</p>
-                </div>
-                <Badge>{x.triage}</Badge>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card title="Acciones rápidas">
-          <div className="flex flex-wrap gap-2">
-            <button className="rounded-xl px-3 py-1.5 border">Marcar llegada</button>
-            <button className="rounded-xl px-3 py-1.5 border">Ver historial</button>
-            <button className="rounded-xl px-3 py-1.5 border">Notas</button>
-          </div>
-        </Card>
+    let cancelled = false;
+    async function fetchDoctorMe() {
+      // Si el rol es doctor y hay token, obtener /api/Doctors/me para el id real
+      if ((user?.role === "doctor" || String(user?.role).toLowerCase() === "doctor") && (token || localStorage.getItem("token"))) {
+        setLoading(true);
+        try {
+          const tk = token || localStorage.getItem("token") || "";
+          const res = await fetch(`${baseURL}/api/Doctors/me`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json, text/plain, */*",
+              Authorization: `Bearer ${tk}`,
+            },
+          });
+          if (res.ok) {
+            const js = await res.json();
+            const did = js?.data?.id ?? js?.id ?? null;
+            if (!cancelled && did) setDoctorId(Number(did));
+          }
+        } catch (e) {
+          // ignore and fallback to existing doctorId
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      }
+    }
+
+    fetchDoctorMe();
+    return () => { cancelled = true; };
+  }, [user?.role, token]);
+
+  if (!doctorId) {
+    return (
+      <div className="p-6 bg-white rounded shadow">
+        <p>No se encontró el ID del médico en la sesión. Por favor revisa tu cuenta o inicia sesión nuevamente.</p>
       </div>
+    );
+  }
+
+  return (
+    <div>
+      <DoctorCalendar doctorId={doctorId} />
+    </div>
   );
 }

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { baseURL } from "../lib/api";
+import { formatRut } from "../Utils/rut";
 
 export function DoctorCalendar({ doctorId }: { doctorId: number }) {
   const { token } = useAuth();
@@ -126,19 +127,53 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
             <div>
               <strong>
                 {(() => {
+                  // Mostrar la hora tal cual viene en el API (no convertir a zona local)
                   try {
-                    // si viene algo tipo "2025-11-02T15:00:00Z"
-                    const d = new Date(appt.hour);
-                    return d.toLocaleTimeString("es-CL", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
+                    const h = appt.hour;
+                    if (typeof h === 'string') {
+                      const t = h.indexOf('T');
+                      if (t !== -1) {
+                        // formato ISO: YYYY-MM-DDTHH:MM:SSZ -> extraer HH:MM
+                        return h.substring(t + 1, t + 6);
+                      }
+                      // si no es ISO pero contiene hora, tomar los primeros 5 caracteres HH:MM
+                      if (h.includes(':')) return h.slice(0, 5);
+                    }
+                    return String(h);
                   } catch {
-                    // si viene solo "15:00"
-                    return appt.hour;
+                    return String(appt.hour ?? '');
                   }
                 })()}
               </strong>
+              <div className="text-sm text-gray-600 mt-1">
+                {/* Mostrar RUT formateado si existe */}
+                <div>
+                  <b>RUT:</b>{' '}
+                  {(() => {
+                    const r = appt.rut || appt.patientRut || appt.patient?.rut || appt.patientRut || appt.patient?.document || '';
+                    try {
+                      if (!r) return '-';
+                      return formatRut(String(r));
+                    } catch {
+                      return String(r || '-');
+                    }
+                  })()}
+                </div>
+                {/* Prioridad y notas */}
+                <div>
+                  <b>Prioridad:</b>{' '}
+                  {(() => {
+                    const p = appt.triageLevel ?? appt.priority ?? null;
+                    if (!p) return '-';
+                    const s = String(p).trim().toUpperCase();
+                    if (s === 'LOW') return 'Baja';
+                    if (s === 'MEDIUM') return 'Media';
+                    if (s === 'HIGH') return 'Alta';
+                    return p;
+                  })()}
+                </div>
+                <div><b>Descripción:</b> {appt.triageNotes ?? appt.description ?? '-'}</div>
+              </div>
             </div>
             <button
               className="bg-red-500 text-white px-3 py-1 rounded"
