@@ -8,32 +8,50 @@ export default function Paso4DiayHora({
   onNext: (data: { fechaHora: string }) => void;
   onBack: () => void;
 }) {
-  // Helpers
+  // ───────────────────────────────────────── Helpers ─────────────────────────────────────────
+  const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
   function todayISO() {
     const d = new Date();
-    const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   }
 
   function plusDaysISO(days: number) {
     const d = new Date();
-    const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     d.setDate(d.getDate() + days);
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   }
 
-  // Obtener datos seleccionados del wizard
+  /** Junta un YYYY-MM-DD con "HH:mm" y devuelve Date en zona local */
+  function mergeDateAndTime(dateISO: string, hhmm: string): Date {
+    const [h, m] = hhmm.split(":").map(Number);
+    const [y, mo, da] = dateISO.split("-").map(Number);
+    return new Date(y, (mo ?? 1) - 1, da ?? 1, h ?? 0, m ?? 0, 0, 0);
+  }
+
+  /** Oculta horas pasadas si el día seleccionado es hoy */
+  function filterPastTimesForToday(
+    slots: { time: string; label: string; disabled?: boolean }[],
+    dateISO: string
+  ) {
+    const now = new Date();
+    const isToday = dateISO === todayISO();
+    if (!isToday) return slots;
+    return slots.filter((s) => mergeDateAndTime(dateISO, s.time).getTime() >= now.getTime());
+  }
+
+  // ───────────────────────────────────── Datos del wizard ─────────────────────────────────────
   const wizardData = (window as any).wizardData || {};
   const doctorId = wizardData.profesionalId;
 
-  // Estado
-  const [date, setDate] = useState(todayISO());
+  // ─────────────────────────────────────────── Estado ─────────────────────────────────────────
+  const [date, setDate] = useState<string>(todayISO());
   const [error, setError] = useState<string | null>(null);
   const [slots, setSlots] = useState<{ time: string; label: string; disabled?: boolean }[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Cargar horarios disponibles
+  // ─────────────────────────────────── Cargar horarios disponibles ────────────────────────────
   useEffect(() => {
     if (!date || !doctorId) {
       setSlots([]);
@@ -53,39 +71,54 @@ export default function Paso4DiayHora({
         Accept: "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ id: Number(doctorId), date }),
+      body: JSON.stringify({ id: Number(doctorId), date }), // date = "YYYY-MM-DD"
     })
       .then(async (res) => {
         if (!res.ok) throw new Error("API calendar error");
         const api = await res.json();
-        const slotsApi = (api.data?.appointmentsAvailable || []).map((slot: any) => ({
-          time: slot.startHour.slice(11, 16),
-          label: `${slot.startHour.slice(11, 16)} - ${slot.finishHour.slice(11, 16)}`,
-          disabled: !slot.status,
-        }));
-        setSlots(slotsApi);
+
+        // Mapear a {time, label, disabled}
+        const mapped: { time: string; label: string; disabled?: boolean }[] =
+          (api.data?.appointmentsAvailable || []).map((slot: any) => {
+            // startHour/finishHour se asumen ISO o "YYYY-MM-DDTHH:mm:ss"
+            const startHHMM = slot.startHour.slice(11, 16);
+            const finishHHMM = slot.finishHour.slice(11, 16);
+            return {
+              time: startHHMM,
+              label: `${startHHMM} - ${finishHHMM}`,
+              disabled: !slot.status,
+            };
+          });
+
+        // Filtro: si es hoy, ocultar horas pasadas
+        const filtered = filterPastTimesForToday(mapped, date);
+
+        setSlots(filtered);
       })
       .catch(() => {
         // Si falla, usar datos simulados
-        const simulatedSlots = [
+        const simulated = [
           { time: "09:00", label: "09:00 - 09:30", disabled: false },
           { time: "09:30", label: "09:30 - 10:00", disabled: false },
           { time: "10:00", label: "10:00 - 10:30", disabled: false },
           { time: "10:30", label: "10:30 - 11:00", disabled: false },
           { time: "11:00", label: "11:00 - 11:30", disabled: false },
+          { time: "15:00", label: "15:00 - 15:30", disabled: false },
         ];
-        setSlots(simulatedSlots);
+        const filtered = filterPastTimesForToday(simulated, date);
+        setSlots(filtered);
       })
       .finally(() => setLoading(false));
   }, [date, doctorId]);
 
-  // Guardar datos en wizard global
+  // ─────────────────────────── Guardar en wizard global (fechaHora ISO local) ───────────────────────────
   useEffect(() => {
-    const wizardData = (window as any).wizardData || {};
-    wizardData.fechaHora = date && selectedSlot ? `${date}T${selectedSlot}` : null;
-    (window as any).wizardData = wizardData;
+    const wd = (window as any).wizardData || {};
+    wd.fechaHora = date && selectedSlot ? `${date}T${selectedSlot}` : null;
+    (window as any).wizardData = wd;
   }, [date, selectedSlot]);
 
+  // ─────────────────────────────────────────── Render ─────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto p-6 rounded-2xl border bg-white mt-8">
       <h2 className="text-xl font-semibold mb-4">Selecciona día y hora</h2>
@@ -120,11 +153,11 @@ export default function Paso4DiayHora({
         ) : (
           <ul className="grid grid-cols-2 gap-3 mt-2">
             {slots.map((slot) => (
-              <li key={slot.time}>
+              <li key={`${date}-${slot.time}`}>
                 <button
                   className={`w-full rounded-xl border px-3 py-2 text-center ${
                     selectedSlot === slot.time ? "border-blue-500 bg-blue-50" : ""
-                  } ${slot.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                  } ${slot.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
                   disabled={slot.disabled}
                   onClick={() => setSelectedSlot(slot.time)}
                 >
@@ -149,7 +182,9 @@ export default function Paso4DiayHora({
         </button>
         <button
           className={`rounded-xl px-5 py-2 ${
-            !date || !selectedSlot ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-black text-white"
+            !date || !selectedSlot
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-black text-white"
           }`}
           disabled={!date || !selectedSlot}
           onClick={() => date && selectedSlot && onNext({ fechaHora: `${date}T${selectedSlot}` })}
