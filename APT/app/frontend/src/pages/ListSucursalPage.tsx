@@ -29,6 +29,13 @@ export default function ListSucursalPage() {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [modalSucursal, setModalSucursal] = useState<Sucursal | null>(null);
+  const [toast, setToast] = useState<{ visible: boolean; type: 'success' | 'error' | null; text: string }>(
+    { visible: false, type: null, text: '' }
+  );
 
   useEffect(() => {
     async function fetchSucursales() {
@@ -104,17 +111,93 @@ export default function ListSucursalPage() {
                     )}
                   </select>
 
-                  <button
-                    className="mt-3 bg-red-600 text-white px-3 py-1 rounded opacity-60 cursor-not-allowed"
-                    disabled
-                  >
-                    Eliminar
-                  </button>
-                </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <button
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 disabled:opacity-60"
+                      onClick={() => {
+                        // open modal instead of browser confirm
+                        setModalSucursal(sucursal);
+                        setShowDeleteModal(true);
+                        setMessage(null);
+                      }}
+                      disabled={deletingId === sucursal.id}
+                    >
+                      {deletingId === sucursal.id ? 'Eliminando…' : 'Eliminar'}
+                      </button>
+                  </div>
+                  </div>
               ))
             )}
           </div>
         )}
+          {/* Toast container (top of page) */}
+          {toast.visible && (
+            <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full px-4`}>
+              <div className={`${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'} border rounded p-3 shadow`}>
+                {toast.text}
+              </div>
+            </div>
+          )}
+
+          {/* Delete confirmation modal */}
+          {showDeleteModal && modalSucursal && (
+            <div className="fixed inset-0 z-40 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setShowDeleteModal(false)} />
+              <div className="bg-white rounded-lg p-6 z-50 max-w-md w-full shadow">
+                <h3 className="text-lg font-semibold mb-2">Confirmar eliminación</h3>
+                <p className="text-sm text-gray-600">¿Eliminar sucursal '{modalSucursal.nombre}'? Esta acción no se puede deshacer.</p>
+                <div className="mt-4 flex gap-3 justify-end">
+                  <button className="px-3 py-1 rounded border" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+                  <button
+                    className="px-3 py-1 rounded bg-red-600 text-white"
+                    onClick={async () => {
+                      // perform delete
+                      try {
+                        if (!token) {
+                          setToast({ visible: true, type: 'error', text: 'No hay token de autenticación' });
+                          setShowDeleteModal(false);
+                          setTimeout(() => setToast({ visible: false, type: null, text: '' }), 4000);
+                          return;
+                        }
+                        setDeletingId(modalSucursal.id);
+                        const res = await fetch(`${baseURL}/api/Sucursales/${modalSucursal.id}`, {
+                          method: 'DELETE',
+                          headers: {
+                            accept: 'application/json, text/plain, */*',
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({ nombre: modalSucursal.nombre, direccion: modalSucursal.direccion, comuna: modalSucursal.comuna }),
+                        });
+
+                        let json: any = null;
+                        try { json = await res.json(); } catch { json = null; }
+
+                        if (res.ok) {
+                          setSucursales((s) => s.filter((x) => x.id !== modalSucursal.id));
+                          setToast({ visible: true, type: 'success', text: `Sucursal '${modalSucursal.nombre}' Eliminada correctamente` });
+                          setTimeout(() => setToast({ visible: false, type: null, text: '' }), 4000);
+                        } else {
+                          const msg = json?.message || json?.error || `Error ${res.status}`;
+                          setToast({ visible: true, type: 'error', text: msg || 'Error al eliminar sucursal' });
+                          setTimeout(() => setToast({ visible: false, type: null, text: '' }), 4000);
+                        }
+                      } catch (err: any) {
+                        setToast({ visible: true, type: 'error', text: err?.message || 'Error de red al eliminar sucursal' });
+                        setTimeout(() => setToast({ visible: false, type: null, text: '' }), 4000);
+                      } finally {
+                        setDeletingId(null);
+                        setShowDeleteModal(false);
+                        setModalSucursal(null);
+                      }
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     </>
   );
