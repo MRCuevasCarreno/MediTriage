@@ -183,38 +183,26 @@ export default function AdminDashboard() {
           />
         </div>
 
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="mt-6 grid grid-cols-1 gap-6">
           <Card title="Operaciones">
             <ul className="list-disc pl-5 space-y-2 text-sm">
               <li>
-                <Link
-                  to="/admin/doctors"
-                  className="text-blue-600 hover:underline"
-                >
+                <Link to="/admin/doctors" className="text-blue-600 hover:underline">
                   Configurar especialidades / Doctores
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/admin/assign/doctor"
-                  className="text-blue-600 hover:underline"
-                >
+                <Link to="/admin/assign/doctor" className="text-blue-600 hover:underline">
                   Asignar agenda a médicos
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/admin/sucursal"
-                  className="text-blue-600 hover:underline"
-                >
+                <Link to="/admin/sucursal" className="text-blue-600 hover:underline">
                   Sucursales
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/admin/list/doctor"
-                  className="text-blue-600 hover:underline"
-                >
+                <Link to="/admin/list/doctor" className="text-blue-600 hover:underline">
                   Revisar reportes de doctores
                 </Link>
               </li>
@@ -227,12 +215,6 @@ export default function AdminDashboard() {
                 Ver listados
               </Link>
             </div>
-          </Card>
-
-          <Card title="Alertas">
-            <p className="text-sm text-gray-600">
-              {loading ? "Cargando…" : "Sin alertas por ahora."}
-            </p>
           </Card>
         </div>
       </div>
