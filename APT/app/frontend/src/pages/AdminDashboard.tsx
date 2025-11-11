@@ -13,10 +13,15 @@ type Stats = {
   noShows: number;
 };
 
-const Stat = ({ label, value }: { label: string; value: number | null }) => (
-  <div className="rounded-2xl border bg-white p-6 shadow-sm">
-    <p className="text-sm text-gray-600">{label}</p>
-    <p className="mt-2 text-4xl font-bold">{value ?? "—"}</p>
+const Stat = ({ label, value, color, icon }: { label: string; value: number | null; color?: string; icon?: React.ReactNode }) => (
+  <div className={`rounded-2xl p-6 shadow-sm border ${color ?? 'border-gray-100'} bg-white`}>
+    <div className="flex items-center gap-3">
+      <div className="text-2xl">{icon ?? null}</div>
+      <div>
+        <p className="text-sm text-gray-600">{label}</p>
+        <p className="mt-2 text-4xl font-bold">{value ?? "—"}</p>
+      </div>
+    </div>
   </div>
 );
 
@@ -25,6 +30,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [forceRefresh, setForceRefresh] = useState(false);
+  const [cacheTs, setCacheTs] = useState<number | null>(null);
 
   // para “normalizar” respuestas distintas del backend
   function extractCount(resp: any): number {
@@ -51,8 +58,31 @@ export default function AdminDashboard() {
   useEffect(() => {
     let canceled = false;
 
+    const CACHE_KEY = "admin_stats";
+    const TTL = 5 * 60 * 1000; // 5 minutos
+
     (async () => {
       try {
+        // intentar usar cache salvo que se fuerce refresh
+        if (!forceRefresh) {
+          try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed && parsed.stats && parsed.ts && Date.now() - parsed.ts < TTL) {
+                if (!canceled) {
+                  setStats(parsed.stats as Stats);
+                  setCacheTs(parsed.ts);
+                  setLoading(false);
+                  return; // usar cache y no refetch
+                }
+              }
+            }
+          } catch (e) {
+            // ignore cache parse errors
+          }
+        }
+
         // este /api/... ya pasa por tu túnel/ngrok
         const [docs, pats, apps] = await Promise.all([
           get<any>("/api/Doctors", { PageNumber: 1, PageSize: 50 }),
@@ -70,6 +100,11 @@ export default function AdminDashboard() {
         if (!canceled) {
           setStats(s);
           setLoading(false);
+          try {
+            const now = Date.now();
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ stats: s, ts: now }));
+            setCacheTs(now);
+          } catch (e) {}
         }
       } catch (e: any) {
         if (!canceled) {
@@ -80,13 +115,16 @@ export default function AdminDashboard() {
           );
           setLoading(false);
         }
+      } finally {
+        // reset forceRefresh flag after attempt
+        if (!canceled) setForceRefresh(false);
       }
     })();
 
     return () => {
       canceled = true;
     };
-  }, []);
+  }, [forceRefresh]);
 
   return (
     <>
@@ -97,38 +135,56 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-6 py-6">
         {error && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
-            {error}
+            <div className="font-medium">Error cargando métricas</div>
+            <div className="mt-1 text-sm">{error}</div>
+            <div className="mt-3 flex items-center gap-4">
+              <button
+                className="rounded-xl px-3 py-1.5 border bg-white hover:bg-gray-50"
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  setStats(null);
+                  setForceRefresh(true); // forzar bypass cache y re-fetch
+                }}
+              >
+                Reintentar
+              </button>
+              {/* Mostrar info de cache si existe */}
+              {cacheTs && !loading && (
+                <div className="text-sm text-gray-500">{(() => {
+                  const diff = Math.floor((Date.now() - cacheTs) / 1000);
+                  if (diff < 60) return `datos desde cache (hace ${diff}s)`;
+                  if (diff < 3600) return `datos desde cache (hace ${Math.floor(diff / 60)}m)`;
+                  return `datos desde cache (hace ${Math.floor(diff / 3600)}h)`;
+                })()}</div>
+              )}
+            </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Stat
             label="Pacientes"
             value={loading ? null : stats?.patients ?? null}
+            color="border-blue-100"
+            icon={<span className="text-blue-500">👥</span>}
           />
           <Stat
             label="Médicos"
             value={loading ? null : stats?.doctors ?? null}
+            color="border-green-100"
+            icon={<span className="text-green-500">🩺</span>}
           />
           <Stat
             label="Citas"
             value={loading ? null : stats?.appointments ?? null}
-          />
-          <Stat
-            label="No-shows"
-            value={loading ? null : stats?.noShows ?? null}
+            color="border-purple-100"
+            icon={<span className="text-purple-500">📅</span>}
           />
         </div>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card
-            title="Operaciones"
-            actions={
-              <button className="rounded-xl px-3 py-1.5 border hover:bg-gray-50">
-                Exportar
-              </button>
-            }
-          >
+          <Card title="Operaciones">
             <ul className="list-disc pl-5 space-y-2 text-sm">
               <li>
                 <Link
