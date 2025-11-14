@@ -256,30 +256,57 @@ public class DoctorsController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteDoctor([FromBody] DoctorDeleteDto dto)
     {
-        // Buscar doctor y usuario asociados
         var doctor = await _db.Doctors
             .Include(d => d.User)
-            .FirstOrDefaultAsync(d => d.Id == dto.UserId && d.UserId == dto.Id);
+            .Include(d => d.Sucursales)
+            .FirstOrDefaultAsync(d => d.Id == dto.Id && d.UserId == dto.UserId);
 
         if (doctor == null)
             return Error(StatusCodes.Status404NotFound, "NotFound", "Doctor no encontrado.");
 
-        // Guardar datos para la respuesta antes de eliminar
-        var result = new
+        // Guarda los datos antes de eliminar
+        var userId = doctor.User.Id;
+        var doctorId = doctor.Id;
+        var name = doctor.User.Name;
+        var specialty = doctor.Specialty;
+        var email = doctor.User.Email;
+
+        // Eliminar citas donde el doctor es médico
+        var doctorAppointments = await _db.Appointments
+            .Where(a => a.DoctorId == doctor.Id)
+            .ToListAsync();
+        _db.Appointments.RemoveRange(doctorAppointments);
+
+        // Eliminar citas donde el usuario es paciente (si aplica)
+        var patient = await _db.Patients.FirstOrDefaultAsync(p => p.UserId == doctor.User.Id);
+        if (patient != null)
         {
-            id = doctor.User.Id,
-            userId = doctor.Id,
-            name = doctor.User.Name,
-            specialty = doctor.Specialty,
-            email = doctor.User.Email
-        };
+            var patientAppointments = await _db.Appointments
+                .Where(a => a.PatientId == patient.Id)
+                .ToListAsync();
+            _db.Appointments.RemoveRange(patientAppointments);
+        }
+
+        // Eliminar relación con sucursales
+        doctor.Sucursales.Clear();
+
+        await _db.SaveChangesAsync();
 
         // Eliminar doctor y usuario
         _db.Doctors.Remove(doctor);
         _db.Users.Remove(doctor.User);
         await _db.SaveChangesAsync();
 
-        return Ok(new SuccessResponse<object>(new[] { result }, "Doctor Eliminado exitosamente."));
+        var result = new
+        {
+            id = userId,
+            userId = doctorId,
+            name,
+            specialty,
+            email
+        };
+
+        return Ok(new SuccessResponse<object>(new[] { result }, "Doctor eliminado exitosamente."));
     }
 
     // Helpers locales

@@ -40,7 +40,11 @@ export default function ListDoctorPage() {
   const [sortField, setSortField] = useState<"name" | "specialty" | "email">("name");
   const [totalPages, setTotalPages] = useState(1);
   const [searchName, setSearchName] = useState("");
-  const [deleteMessage, setDeleteMessage] = useState("");
+  const [toast, setToast] = useState<{ visible: boolean; type: "success" | "error" | null; text: string }>({
+    visible: false,
+    type: null,
+    text: "",
+  });
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [sucursalesLoading, setSucursalesLoading] = useState(false);
   const [assignOpen, setAssignOpen] = useState<Record<number, boolean>>({});
@@ -192,7 +196,14 @@ export default function ListDoctorPage() {
           </div>
         </div>
 
-        {deleteMessage && <div className="mb-4 text-green-600">{deleteMessage}</div>}
+        {/* Toast container (top) */}
+        {toast.visible && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full px-4">
+            <div className={`${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'} border rounded p-3 shadow`}>
+              {toast.text}
+            </div>
+          </div>
+        )}
 
         {/* Contenido */}
         {loading ? (
@@ -242,12 +253,13 @@ export default function ListDoctorPage() {
                   <button
                     onClick={async () => {
                       if (!token) {
-                        setDeleteMessage("Token no disponible.");
+                        setToast({ visible: true, type: "error", text: "Token no disponible." });
+                        setTimeout(() => setToast({ visible: false, type: null, text: "" }), 4000);
                         return;
                       }
                       try {
                         // ojo: este payload es el que tú usabas
-                        const payload = { id: doc.userId, userId: doc.id };
+                        const payload = { id: doc.id, userId: doc.userId };
                         const res = await fetch(`${baseURL}/api/Doctors`, {
                           method: "DELETE",
                           headers: {
@@ -259,15 +271,16 @@ export default function ListDoctorPage() {
                         });
                         if (!res.ok) {
                           const txt = await res.text().catch(() => "");
-                          setDeleteMessage(
-                            `Error al eliminar: ${txt || res.status}`
-                          );
+                          setToast({ visible: true, type: "error", text: `Error al eliminar: ${txt || res.status}` });
+                          setTimeout(() => setToast({ visible: false, type: null, text: "" }), 4000);
                           return;
                         }
-                        setDeleteMessage(`Doctor eliminado: ${doc.name}`);
+                        setToast({ visible: true, type: "success", text: `Doctor '${doc.name}' Eliminado correctamente` });
+                        setTimeout(() => setToast({ visible: false, type: null, text: "" }), 4000);
                         setDoctors((prev) => prev.filter((d) => d.id !== doc.id));
                       } catch (err) {
-                        setDeleteMessage("Error de red al eliminar doctor");
+                        setToast({ visible: true, type: "error", text: "Error de red al eliminar doctor" });
+                        setTimeout(() => setToast({ visible: false, type: null, text: "" }), 4000);
                       }
                     }}
                     className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
