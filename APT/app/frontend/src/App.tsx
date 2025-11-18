@@ -15,6 +15,7 @@ import Appointments from "./pages/Appointments";
 import Doctor from "./pages/Doctor";
 import NotFound from "./pages/NotFound";
 import AgendarInvitado from "./pages/AgendarInvitado";
+import PatientAppointmentsPage from "./pages/PatientAppointmentsPage";
 
 // Admin
 import Admin from "./pages/Admin";              // Wrapper que renderiza AdminDashboard
@@ -73,6 +74,18 @@ function DoctorOnlyGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function PatientOnlyGuard({ children }: { children: ReactNode }) {
+  const { user, token, ready } = useAuth();
+  if (!ready) return <Loading />;
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role !== "patient") {
+    return (
+      <div className="p-8 text-center text-red-600">Acceso denegado. Solo pacientes pueden ver esta página.</div>
+    );
+  }
+  return <>{children}</>;
+}
+
 /* --------------------------------- App ---------------------------------- */
 export default function App() {
   return (
@@ -89,6 +102,7 @@ export default function App() {
           <Route path="/book" element={<BookAppointment />} />
           <Route path="/triage" element={<Triage />} />
           <Route path="/appointments" element={<Appointments />} />
+          <Route path="/my-appointments" element={<PatientOnlyGuard><PatientAppointmentsPage /></PatientOnlyGuard>} />
 
           {/* Compatibilidad: redirigir rutas viejas */}
           <Route path="/home/admin" element={<Navigate to="/admin" replace />} />

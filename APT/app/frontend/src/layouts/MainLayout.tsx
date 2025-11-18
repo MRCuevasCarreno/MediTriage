@@ -56,6 +56,9 @@ function Navbar() {
                     <NavLink end to="/" className={linkCls}>Inicio</NavLink>
                     <NavLink to="/agendar-invitado" className={linkCls}>Agendar</NavLink>
                     <NavLink to="/triage" className={linkCls}>Triage</NavLink>
+                    {role === 'patient' && (
+                      <NavLink to="/my-appointments" className={linkCls}>Mis Citas</NavLink>
+                    )}
                   </>
                 )
               ) : (
@@ -113,7 +116,7 @@ function Navbar() {
                   <NavLink end to="/" className={linkCls} onClick={() => setOpen(false)}>Inicio</NavLink>
                   <NavLink to="/agendar-invitado" className={linkCls} onClick={() => setOpen(false)}>Agendar</NavLink>
                   <NavLink to="/triage" className={linkCls} onClick={() => setOpen(false)}>Triage</NavLink>
-                  {user && <NavLink to="/appointments" className={linkCls} onClick={() => setOpen(false)}>Mis citas</NavLink>}
+                  {user && role === 'patient' && <NavLink to="/my-appointments" className={linkCls} onClick={() => setOpen(false)}>Mis citas</NavLink>}
                 </>
               )
             ) : (
