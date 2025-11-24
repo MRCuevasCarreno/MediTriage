@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" version="29.1.1">
+  <diagram name="Página-1" id="6HZSwSpC6110Fa7xMevL">
+    <mxGraphModel dx="1246" dy="730" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-1" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=15;" value="User" vertex="1">
+          <mxGeometry height="160" width="190" x="90" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-2" parent="suKD_Vzf22uoNGpHy5nI-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="Id (PK)&lt;br&gt;Name&lt;br&gt;Email (UNIQUE)&lt;br&gt;Role&lt;br&gt;PasswordHash" vertex="1">
+          <mxGeometry height="130" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-3" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" value="Patients" vertex="1">
+          <mxGeometry height="150" width="190" x="370" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-4" parent="suKD_Vzf22uoNGpHy5nI-3" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;br&gt;Id (PK)&lt;br&gt;UserId (FK)&lt;br&gt;DateOfBirth" vertex="1">
+          <mxGeometry height="120" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-5" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" value="Doctors" vertex="1">
+          <mxGeometry height="120" width="190" x="370" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-6" parent="suKD_Vzf22uoNGpHy5nI-5" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="Id (PK)&lt;br&gt;UserId (FK)&lt;br&gt;Specialty&lt;br&gt;Center" vertex="1">
+          <mxGeometry height="90" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-7" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;" value="Appointments" vertex="1">
+          <mxGeometry height="220" width="230" x="670" y="175" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-8" parent="suKD_Vzf22uoNGpHy5nI-7" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;br&gt;Id (PK)&lt;br&gt;PatientId (FK)&lt;br&gt;DoctorId (FK)&lt;br&gt;Start&lt;br&gt;End&lt;br&gt;Status&lt;br&gt;TriageLevel&lt;br&gt;TriageNotes&lt;br&gt;Rut" vertex="1">
+          <mxGeometry height="190" width="230" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-9" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;" value="Sucursales" vertex="1">
+          <mxGeometry height="170" width="190" x="90" y="425" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-10" parent="suKD_Vzf22uoNGpHy5nI-9" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="Id (PK)&lt;br&gt;Nombre&lt;br&gt;Direccion&lt;br&gt;Comuna" vertex="1">
+          <mxGeometry height="140" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-11" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=15;" value="DoctorSucursal" vertex="1">
+          <mxGeometry height="110" width="190" x="370" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-12" parent="suKD_Vzf22uoNGpHy5nI-11" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;br&gt;DoctorsId (PK, FK)&lt;br&gt;SucursalesId (PK, FK)" vertex="1">
+          <mxGeometry height="80" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-13" edge="1" parent="1" source="suKD_Vzf22uoNGpHy5nI-1" style="endArrow=block;endFill=0;startArrow=oval;startFill=0;html=1;strokeColor=#6c8ebf;fontSize=15;" target="suKD_Vzf22uoNGpHy5nI-3" value="1      0..1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-14" edge="1" parent="1" source="suKD_Vzf22uoNGpHy5nI-1" style="endArrow=block;endFill=0;startArrow=oval;startFill=0;html=1;strokeColor=#6c8ebf;fontSize=15;" target="suKD_Vzf22uoNGpHy5nI-5" value="1      0..1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-15" edge="1" parent="1" source="suKD_Vzf22uoNGpHy5nI-3" style="endArrow=block;endFill=0;startArrow=oval;startFill=0;html=1;strokeColor=#b85450;fontSize=15;" target="suKD_Vzf22uoNGpHy5nI-7" value="1      *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-16" edge="1" parent="1" source="suKD_Vzf22uoNGpHy5nI-5" style="endArrow=block;endFill=0;startArrow=oval;startFill=0;html=1;strokeColor=#b85450;fontSize=15;" target="suKD_Vzf22uoNGpHy5nI-7" value="1      *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-17" edge="1" parent="1" source="suKD_Vzf22uoNGpHy5nI-5" style="endArrow=block;endFill=0;startArrow=oval;startFill=0;html=1;strokeColor=#d79b00;fontSize=15;" target="suKD_Vzf22uoNGpHy5nI-11" value="1      *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="suKD_Vzf22uoNGpHy5nI-18" edge="1" parent="1" source="suKD_Vzf22uoNGpHy5nI-9" style="endArrow=block;endFill=0;startArrow=oval;startFill=0;html=1;strokeColor=#d79b00;fontSize=15;" target="suKD_Vzf22uoNGpHy5nI-11" value="1      *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

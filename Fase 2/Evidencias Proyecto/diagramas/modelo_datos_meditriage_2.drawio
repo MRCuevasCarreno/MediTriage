@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" version="29.1.1">
+  <diagram id="modelo-datos-dw-meditriage" name="DW MediTriage">
+    <mxGraphModel dx="1246" dy="730" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="DimCliente" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimCliente (dw)" vertex="1">
+          <mxGeometry height="250" width="240" x="520" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-4" parent="DimCliente" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;customerKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;idCliente&lt;/span&gt;&lt;br&gt;&lt;span&gt;nombre&lt;/span&gt;&lt;br&gt;&lt;span&gt;apellido&lt;/span&gt;&lt;br&gt;&lt;span&gt;edad&lt;/span&gt;&lt;br&gt;&lt;span&gt;estadoCivil&lt;/span&gt;&lt;br&gt;&lt;span&gt;residencia&lt;/span&gt;&lt;br&gt;&lt;span&gt;origen&lt;/span&gt;&lt;br&gt;&lt;span&gt;scdStartDate&lt;/span&gt;&lt;br&gt;&lt;span&gt;scdEndDate&lt;/span&gt;&lt;br&gt;&lt;span&gt;scdIsCurrent&lt;/span&gt;" vertex="1">
+          <mxGeometry height="220" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DimTiempo" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimTiempo (dw)" vertex="1">
+          <mxGeometry height="200" width="220" x="860" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-5" parent="DimTiempo" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;dateKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;fullDate&lt;/span&gt;&lt;br&gt;&lt;span&gt;day&lt;/span&gt;&lt;br&gt;&lt;span&gt;month&lt;/span&gt;&lt;br&gt;&lt;span&gt;monthName&lt;/span&gt;&lt;br&gt;&lt;span&gt;quarter&lt;/span&gt;&lt;br&gt;&lt;span&gt;year&lt;/span&gt;&lt;br&gt;&lt;span&gt;isWeekend&lt;/span&gt;" vertex="1">
+          <mxGeometry height="170" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DimSucursal" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimSucursal (dw)" vertex="1">
+          <mxGeometry height="160" width="220" x="520" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-6" parent="DimSucursal" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;storeKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;sucursalId&lt;/span&gt;&lt;br&gt;&lt;span&gt;nombreSucursal&lt;/span&gt;&lt;br&gt;&lt;span&gt;comuna&lt;/span&gt;&lt;br&gt;&lt;span&gt;provincia&lt;/span&gt;&lt;br&gt;&lt;span&gt;region&lt;/span&gt;" vertex="1">
+          <mxGeometry height="130" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DimProducto" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimProducto (dw)" vertex="1">
+          <mxGeometry height="160" width="220" x="1180" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-8" parent="DimProducto" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;productKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;codigoProducto (UNIQUE)&lt;/span&gt;&lt;br&gt;&lt;span&gt;nombre&lt;/span&gt;&lt;br&gt;&lt;span&gt;familia&lt;/span&gt;" vertex="1">
+          <mxGeometry height="130" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DimCanal" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimCanal (dw)" vertex="1">
+          <mxGeometry height="120" width="160" x="1240" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-7" parent="DimCanal" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;channelKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;canal&lt;/span&gt;" vertex="1">
+          <mxGeometry height="90" width="160" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DimDocumento" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimDocumento (dw)" vertex="1">
+          <mxGeometry height="90" width="220" x="520" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-1" parent="DimDocumento" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;docTypeKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;tipoDocumento&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DimVendedor" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#e1d5e7;strokeColor=#9673a6;" value="DimVendedor (dw)" vertex="1">
+          <mxGeometry height="120" width="220" x="1180" y="525" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-2" parent="DimVendedor" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;sellerKey (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;idVendedor&lt;/span&gt;&lt;br&gt;&lt;span&gt;nombre&lt;/span&gt;&lt;br&gt;&lt;span&gt;apellido&lt;/span&gt;" vertex="1">
+          <mxGeometry height="90" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="FactVentaDetalle" parent="1" style="shape=swimlane;childLayout=stackLayout;horizontal=1;startSize=30;rounded=0;whiteSpace=wrap;html=1;fontSize=15;fillColor=#f5f5f5;strokeColor=#666666;" value="FactVentaDetalle (dw)" vertex="1">
+          <mxGeometry height="300" width="245" x="855" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="JKM--zrwdN95IALvxqdT-3" parent="FactVentaDetalle" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=15;" value="&lt;span&gt;factId (PK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;dateKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;productKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;customerKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;sellerKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;storeKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;channelKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;docTypeKey (FK)&lt;/span&gt;&lt;br&gt;&lt;span&gt;documento&lt;/span&gt;&lt;br&gt;&lt;span&gt;cantidad&lt;/span&gt;&lt;br&gt;&lt;span&gt;precioUnitario&lt;/span&gt;&lt;br&gt;&lt;span&gt;costoUnitario&lt;/span&gt;&lt;br&gt;&lt;span&gt;totalLinea&lt;/span&gt;&lt;br&gt;&lt;span&gt;margenLinea (calc)&lt;/span&gt;" vertex="1">
+          <mxGeometry height="270" width="230" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimCliente_Fact" edge="1" parent="1" source="DimCliente" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimTiempo_Fact" edge="1" parent="1" source="DimTiempo" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimSucursal_Fact" edge="1" parent="1" source="DimSucursal" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimProducto_Fact" edge="1" parent="1" source="DimProducto" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimCanal_Fact" edge="1" parent="1" source="DimCanal" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimDocumento_Fact" edge="1" parent="1" source="DimDocumento" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Rel_DimVendedor_Fact" edge="1" parent="1" source="DimVendedor" style="endArrow=block;endFill=1;html=1;strokeColor=#9673a6;fontSize=15;" target="FactVentaDetalle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
