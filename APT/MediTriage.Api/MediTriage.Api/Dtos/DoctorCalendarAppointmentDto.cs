@@ -6,4 +6,5 @@ public class DoctorCalendarAppointmentDto
     public string? Rut { get; set; }           // Nuevo campo
     public string? TriageLevel { get; set; }   // Nuevo campo
     public string? TriageNotes { get; set; }   // Nuevo campo
+    public string? FullNamePatient { get; set; } // <-- Agregado
 }

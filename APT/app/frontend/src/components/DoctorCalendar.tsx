@@ -33,7 +33,7 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
           body: JSON.stringify({ id: doctorId, date }),
         });
 
-        if (!res.ok) throw new Error("No tienes citas el día de hoy.");
+        if (!res.ok) throw new Error("Error al cargar el calendario.");
 
         const data = await res.json();
 
@@ -44,9 +44,42 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
             ? data.data.appointmentsNotAvalable
             : [];
 
-        setAppointments(notAvail);
+        // Filtrar solo citas desde la hora actual en adelante
+        const now = new Date();
+        const filtered = notAvail.filter((appt: any) => {
+          try {
+            // appt.hour puede ser string ISO o formato HH:MM
+            const hourStr = appt.hour || '';
+            let apptDateTime: Date;
+            
+            if (hourStr.includes('T')) {
+              // formato ISO completo
+              apptDateTime = new Date(hourStr);
+            } else if (hourStr.includes(':')) {
+              // formato HH:MM - combinar con la fecha seleccionada
+              const [hh, mm] = hourStr.split(':').map(Number);
+              apptDateTime = new Date(date);
+              apptDateTime.setHours(hh, mm, 0, 0);
+            } else {
+              // formato desconocido, mantener la cita
+              return true;
+            }
+            
+            return apptDateTime >= now;
+          } catch {
+            // si hay error parseando, mantener la cita
+            return true;
+          }
+        });
+
+        setAppointments(filtered);
+        
+        // Solo mostrar error si realmente no hay citas en la respuesta del calendario
+        if (notAvail.length === 0) {
+          setError("No tienes citas el día de hoy.");
+        }
       } catch (err: any) {
-        setError(err.message || "No tienes citas el día de hoy.");
+        setError(err.message || "Error al cargar el calendario.");
         setAppointments([]);
       } finally {
         setLoading(false);
@@ -146,6 +179,10 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
                 })()}
               </strong>
               <div className="text-sm text-gray-600 mt-1">
+                {/* Nombre del paciente */}
+                <div>
+                  <b>Nombre de Paciente:</b> {appt.fullNamePatient || appt.patientName || '-'}
+                </div>
                 {/* Mostrar RUT formateado si existe */}
                 <div>
                   <b>RUT:</b>{' '}

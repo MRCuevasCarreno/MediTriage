@@ -131,8 +131,10 @@ public class DoctorsController : ControllerBase
         var slots = new List<AppointmentSlotDto>();
         var notAvailable = new List<AppointmentNotAvailableDto>();
 
-        // Obtener citas agendadas para ese doctor en ese día
+        // Modificado: Incluye Patient y User para evitar NullReferenceException
         var appointments = await _db.Appointments
+            .Include(a => a.Patient)
+            .ThenInclude(p => p.User)
             .Where(a => a.DoctorId == doctor.Id && a.Start.Date == date && a.Status == AppointmentStatus.Scheduled)
             .ToListAsync();
 
@@ -159,7 +161,7 @@ public class DoctorsController : ControllerBase
             {
                 notAvailable.Add(new AppointmentNotAvailableDto
                 {
-                    AppointmentID = appointment?.Id, // <-- Asigna el ID aquí
+                    AppointmentID = appointment?.Id,
                     Hour = slotStart,
                     Status = false
                 });
@@ -173,17 +175,18 @@ public class DoctorsController : ControllerBase
             Specialty = doctor.Specialty,
             AppointmentsAvailable = slots.Where(s => s.Status).ToList(),
             AppointmentsNotAvalable = appointments
-    .Where(a => a.Status == AppointmentStatus.Scheduled)
-    .Select(a => new DoctorCalendarAppointmentDto
-    {
-        AppointmentID = a.Id,
-        Hour = a.Start,
-        Status = false,
-        Rut = a.Rut,
-        TriageLevel = a.TriageLevel,
-        TriageNotes = a.TriageNotes
-    })
-    .ToList()
+                .Where(a => a.Status == AppointmentStatus.Scheduled)
+                .Select(a =>        new DoctorCalendarAppointmentDto
+                {
+                    AppointmentID = a.Id,
+                    Hour = a.Start,
+                    Status = false,
+                    Rut = a.Rut,
+                    TriageLevel = a.TriageLevel,
+                    TriageNotes = a.TriageNotes,
+                    FullNamePatient = a.Patient?.User?.Name // Seguro contra null
+                })
+                .ToList()
         };
 
         return Ok(new { data = response, message = "Citas encontradas." });
