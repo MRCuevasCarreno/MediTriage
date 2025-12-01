@@ -204,17 +204,11 @@ export default function Paso5Confirmacion({
                 });
                 if (meRes.ok) {
                   const meJson = await meRes.json();
-                  // API devuelve { data: { id, name, email }, message }
-                  const pid = meJson?.data?.id ?? auth?.user?.id ?? null;
-                  if (pid) payload.patientId = Number(pid);
-                } else {
-                  // fallback a auth.user.id si /Patients/me falla
-                  const pid = auth?.user?.id ?? (localStorage.getItem("me_id") || null);
+                  // API puede devolver { patientId: 154, userId: 106 } o { data: { patientId: 154 } }
+                  const pid = meJson?.patientId ?? meJson?.data?.patientId ?? null;
                   if (pid) payload.patientId = Number(pid);
                 }
-              } else {
-                const pid = auth?.user?.id ?? (localStorage.getItem("me_id") || null);
-                if (pid) payload.patientId = Number(pid);
+                // if meRes not ok, do not set patientId — avoid using userId as fallback
               }
             } catch (e) {
               try {

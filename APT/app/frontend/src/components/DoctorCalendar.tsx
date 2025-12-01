@@ -33,7 +33,7 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
           body: JSON.stringify({ id: doctorId, date }),
         });
 
-        if (!res.ok) throw new Error("Error al cargar citas");
+        if (!res.ok) throw new Error("No tienes citas el día de hoy.");
 
         const data = await res.json();
 
@@ -46,7 +46,7 @@ export function DoctorCalendar({ doctorId }: { doctorId: number }) {
 
         setAppointments(notAvail);
       } catch (err: any) {
-        setError(err.message || "Error al cargar citas");
+        setError(err.message || "No tienes citas el día de hoy.");
         setAppointments([]);
       } finally {
         setLoading(false);
