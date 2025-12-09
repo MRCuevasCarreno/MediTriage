@@ -48,7 +48,7 @@ public class DoctorsController : ControllerBase
     {
         var q = _db.Doctors
             .Include(d => d.User)
-            .Include(d => d.Sucursales) // <-- Incluye sucursales
+            .Include(d => d.Sucursales) 
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(name))
@@ -84,7 +84,7 @@ public class DoctorsController : ControllerBase
                 {
                     Id = s.Id,
                     Name = s.Nombre,
-                    Address = s.Direccion, // <-- Corrección aquí
+                    Address = s.Direccion, 
                     Location = s.Comuna
                 }).ToList()
             })
@@ -184,7 +184,7 @@ public class DoctorsController : ControllerBase
                     Rut = a.Rut,
                     TriageLevel = a.TriageLevel,
                     TriageNotes = a.TriageNotes,
-                    FullNamePatient = a.Patient?.User?.Name // Seguro contra null
+                    FullNamePatient = a.Patient?.User?.Name 
                 })
                 .ToList()
         };

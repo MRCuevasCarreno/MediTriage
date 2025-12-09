@@ -2,12 +2,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { setAuthToken, post, get } from "../lib/api";
 
-/** =========================================================
- *  Tipos de roles (frontend siempre en minúsculas)
- *  =======================================================*/
+
+ /*  Tipos de roles (frontend siempre en minúsculas)*/
 export type Role = "patient" | "doctor" | "admin";
 
-/** Lo que podría venir desde el backend (número, string, etc.) */
 type BackendRole =
   | Role
   | 0 | 1 | 2
@@ -46,17 +44,17 @@ type LoginResponse = {
   id?: string | number;
   doctorId?: string | number;
   email: string;
-  fullName?: string;  // a veces viene fullName
-  name?: string;      // a veces viene name
-  role: BackendRole;  // puede venir 2, "2", "Admin", etc.
+  fullName?: string;  
+  name?: string;      
+  role: BackendRole;  
 };
 
 type MeResponse = {
   id?: string | number;
   doctorId?: string | number;
   email: string;
-  fullName?: string;  // algunos backends devuelven fullName
-  name?: string;      // otros devuelven name
+  fullName?: string;  
+  name?: string;     
   role: BackendRole;
 };
 
@@ -66,7 +64,7 @@ type MeResponse = {
 type AuthCtx = {
   token: string | null;
   user: User | null;
-  /** listo para usar (ya terminó el /api/me o se determinó que no hay token) */
+
   ready: boolean;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -102,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthToken(token);
 
       try {
-        // ✅ endpoint correcto
+        
         const me = await get<MeResponse>("/api/me");
         if (!canceled) {
           setUser({
@@ -147,11 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: res.id,
       doctorId: res.doctorId,
       email: res.email,
-      fullName: res.fullName ?? res.name ?? null, // mapeo seguro
+      fullName: res.fullName ?? res.name ?? null, 
       role: normalizeRole(res.role),
     });
 
-    // ya estamos listos para navegar
     setReady(true);
   }
 

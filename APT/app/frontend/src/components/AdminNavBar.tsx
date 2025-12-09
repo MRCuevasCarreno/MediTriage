@@ -3,14 +3,13 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
 type AdminNavBarProps = {
-  /** cuál pestaña quieres marcar como activa desde la page */
+
   active?: "dashboard" | "doctors" | "sucursales" | "patients";
 };
 
 export default function AdminNavBar({ active }: AdminNavBarProps) {
   const location = useLocation();
 
-  // definimos las pestañas del admin
   const tabs = [
     { key: "dashboard", label: "Dashboard", to: "/admin" },
     { key: "doctors", label: "Doctores", to: "/admin/doctors" },

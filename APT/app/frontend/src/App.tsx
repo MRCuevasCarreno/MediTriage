@@ -19,7 +19,7 @@ import PatientAppointmentsPage from "./pages/PatientAppointmentsPage";
 
 // Admin
 import Admin from "./pages/Admin";              // Wrapper que renderiza AdminDashboard
-import AdminTables from "./pages/AdminTables";  // Tu vista de pestañas/listados
+import AdminTables from "./pages/AdminTables";  
 
 // Secciones de administración existentes
 import AdminDoctorsPage from "./pages/AdminDoctorsPage";
@@ -41,13 +41,12 @@ function Loading() {
 function AdminOnlyGuard({ children }: { children: ReactNode }) {
   const { user, token, ready } = useAuth();
 
-  // Esperar a que termine /auth/me (evita "Acceso denegado" prematuro)
+
   if (!ready) return <Loading />;
 
-  // Si no hay sesión -> login
   if (!token) return <Navigate to="/login" replace />;
 
-  // Si no es admin -> negar
+  // Si no es admin,  negar
   if (user?.role !== "admin") {
     return (
       <div className="p-8 text-center text-red-600">
